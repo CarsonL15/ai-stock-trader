@@ -3,12 +3,16 @@ import java.util.ArrayList;
 public class Market {
     
 
-    ArrayList<Stock> stocks = new ArrayList<>();
+    private static ArrayList<Stock> stocks = new ArrayList<>();
     
 
 
-    public void dayChanged(){
-
+    public static void dayChanged(){
+        for(Stock e : stocks){
+            
+        }
     }
+
+    
 
 }
