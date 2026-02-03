@@ -1,6 +1,7 @@
+package market;
 import java.util.Random;
 
-public class Stock{
+public class StockListing{
 
     private String name;
     private double marketPrice;
@@ -16,7 +17,7 @@ public class Stock{
         
     }
 
-    public Stock(int beginning_shares, double IPO_value, String name,Company company){
+    public StockListing(int beginning_shares, double IPO_value, String name,Company company){
             this.name = name;
             int sharesUnsold = beginning_shares;
             this.totalShares = beginning_shares;
@@ -28,14 +29,22 @@ public class Stock{
             double bookEval = IPO_value;
             int hype = R.nextInt(-20,100);
 
-            companyOwnedShares = R.nextInt(0,6) * totalShares;
+            companyOwnedShares = (int) (R.nextInt(0,6) * .01) * totalShares;
             sharesUnsold -= companyOwnedShares;
 
+            // while (sharesUnsold != 0){
+            //     
+            // }
 
-//             for(){
-// 
-//             }
+
     }
 
+    public String getName(){
+        return this.name;
+    }
+
+            
 }
+
+
 

@@ -1,3 +1,4 @@
+package market;
 public class FinancialReport{
     private double assets;
     private double liabilities;
