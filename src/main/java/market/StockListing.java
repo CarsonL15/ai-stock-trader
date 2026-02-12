@@ -1,5 +1,8 @@
 package market;
+import java.util.ArrayList;
 import java.util.Random;
+
+import company.Company;
 
 public class StockListing{
 
@@ -10,6 +13,15 @@ public class StockListing{
     private int authorizedShares;
     private int companyOwnedShares;
     private Company associatedCompany;
+    private double currentPrice;
+
+    private ArrayList<Double> priceHistory = new ArrayList<>();
+
+    private double oneMonthG;
+    private double sixMonthG;
+    private double oneYearG;
+    private double fiveYearG;
+    private double tenYearG;
 
     
     
@@ -39,9 +51,45 @@ public class StockListing{
 
     }
 
+    private void logHistory(){
+        priceHistory.add(currentPrice);
+
+    }
+
+    public void updateGrowthValues(){
+
+        int size = priceHistory.size();
+
+        if(size > 2){
+                double tempPrice = priceHistory.get(size - 6);
+                double percent = 1;
+
+        
+            if(size > 6){
+                tempPrice = priceHistory.get(size - 6);
+                percent = 1;
+
+                for(int i = size - 5; i < size; i++){
+                    percent = (tempPrice / priceHistory.get(i)) - 1;
+                }
+
+                if(size > 12){
+
+                }
+
+            }
+        }
+
+        
+    }
+
     public String getName(){
         return this.name;
     }
+
+
+
+    
 
             
 }

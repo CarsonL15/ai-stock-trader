@@ -13,6 +13,16 @@ public abstract class TradingBotBasic {
     protected HashMap<String,Stock> stockHeld = new HashMap<>();
     String personality;
 
+    protected ArrayList<Double> cashHistory = new ArrayList<>();
+
+    protected int idiot;
+    protected int sustainability;
+    protected int shortTerm;
+    protected int futureAbility;
+    protected int hypeAffect;
+    protected int trust;
+    protected int responseTime;
+
     protected abstract void evaluate();
 
     protected synchronized boolean  buyStock(Stock s, int amount, double price, TradingBotBasic sellingBot){

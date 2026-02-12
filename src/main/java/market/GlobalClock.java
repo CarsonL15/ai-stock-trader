@@ -6,8 +6,8 @@ public class GlobalClock {
     
 
     public Timer clock;
-    private int day = 1;
-    private int year = 2000;
+    private static int day = 1;
+    private static int year = 2000;
 
     public GlobalClock(){
         clock = new Timer();
@@ -29,15 +29,15 @@ public class GlobalClock {
             Market.dayChanged();
     }
 
-    public int getYear(){
-        return this.year;
+    public static int getYear(){
+        return year;
     }
 
-    public int getDay(){
-        return this.day;
+    public static int getDay(){
+        return day;
     }
 
-    public int getQuarter(){
+    public  static int getQuarter(){
         if (day >= 1 && day <= 90){
             return 1;
         }else if(day >= 91 && day <= 181){

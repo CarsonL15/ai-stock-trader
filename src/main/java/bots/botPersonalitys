@@ -1,9 +1,24 @@
 // Idiot
 /* buying or selling price will be increased or decreased by 1% times the bots idiot factor*/
 
+/* 
+
+
+
+*/
+
 // sustainability 
 /* if sustainability personality, 
 get stocks with highest long term income growth history 
+*/
+
+/*
+
+when buying{
+    
+}
+
+
 */
 
 // short term
