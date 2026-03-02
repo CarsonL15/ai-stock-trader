@@ -8,6 +8,8 @@ public class GlobalClock {
     public Timer clock;
     private static int day = 1;
     private static int year = 2000;
+    private static int month = 1;
+    private int monthCounter = day;
 
     public GlobalClock(){
         clock = new Timer();
@@ -22,11 +24,27 @@ public class GlobalClock {
 
     public void updateDate(){
             day++;
+            monthCounter++;
             if(day > 365){
                 year++;
                 day = 1;
             }
-            Market.dayChanged();
+            if(monthCounter > 31 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12)){
+                month++;
+                monthCounter = 1;
+                Market.monthChanged(day);
+            }else if(monthCounter > 30 && (month == 4 || month == 6 || month == 9 || month == 11)){
+                month ++;
+                monthCounter = 1;
+                Market.monthChanged(day);
+            }else if(monthCounter > 28 && month == 2){
+                month++;
+                monthCounter = 1;
+                Market.monthChanged(day);
+            }
+            
+            Market.dayChanged(day);
+            System.out.println("Day has changed");
     }
 
     public static int getYear(){

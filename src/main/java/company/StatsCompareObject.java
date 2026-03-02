@@ -1,21 +1,29 @@
 package company;
 
-import java.util.Comparator;
-
 import market.StockListing;
 
 public class StatsCompareObject{
 
-    private int num;
+    private double num;
     private StockListing s;
+    private Company c;
 
 
-    public StatsCompareObject(int number, StockListing s){
+    public StatsCompareObject(double number, StockListing stockListing, Company company){
         this.num = number;
-        this.s = s;
+        this.s = stockListing;
+        this.c = company;
     }
 
-    public int getNum(){
+    public double getNum(){
         return this.num;
+    }
+
+    public StockListing getStockListing(){
+        return this.s;
+    }
+
+    public Company getCompany(){
+        return this.c;
     }
 }

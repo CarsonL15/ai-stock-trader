@@ -1,87 +1,126 @@
 package bots;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Random;
 
+import market.Market;
 import market.Stock;
-import market.StockListing;
 
 public abstract class TradingBotBasic {
     
     protected int wealth;
-    protected double cash; 
-    protected HashMap<String,Stock> forPurchaseStock = new HashMap<>();
+    protected float cash;
+    protected HashMap<String,Stock> sellOrders = new HashMap<>();
+    protected HashMap<String,Stock> buyOrders = new HashMap<>();
     protected HashMap<String,Stock> stockHeld = new HashMap<>();
     String personality;
 
-    protected ArrayList<Double> cashHistory = new ArrayList<>();
+    protected ArrayList<Float> cashHistory = new ArrayList<>();
 
     protected int idiot;
-    protected int sustainability;
-    protected int shortTerm;
-    protected int futureAbility;
-    protected int hypeAffect;
-    protected int trust;
+    protected boolean sustainability;
+    protected boolean shortTerm;
+    protected boolean futureAbility;
+    protected boolean hypeAffect;
+    protected boolean trust;
     protected int responseTime;
+
+    Random R;
 
     protected abstract void evaluate();
 
-    protected synchronized boolean  buyStock(Stock s, int amount, double price, TradingBotBasic sellingBot){
+    public synchronized void completeBuyOrder(Stock s){
+        if(buyOrders.get(s.getStockName()) != null &&  s.getPrice() <= buyOrders.get(s.getStockName()).getPrice()){
+            internalCompleteBuyOrder(s);
+        }
+    }
 
-        
-        if(!sellingBot.sellStock(s,amount,price,this)){
-            return false;
+    public void MonthlySalary(){
+        cash += (wealth * wealth) * 1000;
+    }
+
+    protected synchronized void  internalCompleteBuyOrder(Stock s){
+
+
+        Stock tempBuy = buyOrders.get(s.getStockName());
+
+        if(tempBuy.getShareCount() == s.getShareCount()){
+            buyOrders.remove(s.getStockName());
         }else{
-       
+            buyOrders.get(s.getStockName()).removeShares(s.getShareCount());
+        }
+
         if(stockHeld.containsKey(s.getStockName())){
-            stockHeld.get(s.getStockName()).addShares(amount);
+            stockHeld.get(s.getStockName()).addShares(s.getShareCount());
         }else{
-            stockHeld.put(s.getStockName(),s);
+            stockHeld.put(s.getStockName(),new Stock(s.getShareCount(),s.getStockName(),0,this));
         }
-        cash -= amount * price;
-        return true;
+
+
+        cash -= s.getShareCount() * s.getPrice();
+
+
+
+
+    }
+
+    public synchronized void completeSellOrder(Stock s){
+        if(sellOrders.get(s.getStockName()) != null &&  s.getPrice() == sellOrders.get(s.getStockName()).getPrice()){
+            internalCompleteSellOrder(s);
         }
     }
 
-    public synchronized boolean sellStock(Stock s, int amount, double price, TradingBotBasic buyingBot){
-        
-        if (!checkBuy(buyingBot,price * amount)){
-            return false;
+    protected synchronized void internalCompleteSellOrder(Stock s){
+
+        Stock tempSell = sellOrders.get(s.getStockName());
+
+        if(tempSell.getShareCount() == s.getShareCount()){
+            sellOrders.remove(s.getStockName());
+        }else{
+            sellOrders.get(s.getStockName()).removeShares(s.getShareCount());
         }
 
+        cash += s.getShareCount() * s.getPrice();
+    }
 
-        
-        if(!forPurchaseStock.containsKey(s.getStockName())){
-            return false;
-        }else{
-
-            if(amount == s.getShareCount()){
-                forPurchaseStock.remove(s.getStockName());
-            }else{
-                forPurchaseStock.get(s.getStockName()).removeShares(amount);
+    protected synchronized void listSellOrder(Stock s, boolean reList){
+        // local sell order list
+        if(!reList) { // if this order is being made not updated then we dont remove out of their personal stock
+            if (s.getShareCount() == stockHeld.get(s.getStockName()).getShareCount()) {
+                stockHeld.remove(s.getStockName());
+            } else {
+                stockHeld.get(s.getStockName()).removeShares(s.getShareCount());
             }
-            cash += price * amount;
-            
-            return true;
         }
-    }
 
-    public synchronized void listStock(Stock s, int amount){
-        if(s.getShareCount() == amount){
-            stockHeld.remove(s.getStockName());   
-        }else{
-            stockHeld.get(s.getStockName()).removeShares(amount);
+        if(sellOrders.containsKey(s.getStockName())) {
+            Market.getStockListing(s.getStockName()).unListSellOrder(sellOrders.get(s.getStockName()));
+            sellOrders.remove(s.getStockName());
+            s.addShares(sellOrders.get(s.getStockName()).getShareCount());
         }
-            
-        if(forPurchaseStock.containsKey(s.getStockName())){
-            forPurchaseStock.get(s.getStockName()).addShares(amount);
-        }else{
-            forPurchaseStock.put(s.getStockName(),new Stock(amount,s.getStockName()));
-        }
+        sellOrders.put(s.getStockName(), s);
+
+        // global sell order list for stocklisting
+
+        Market.getStockListing(s.getStockName()).listSellOrder(s);
 
     }
 
-    public synchronized boolean checkBuy(TradingBotBasic buyingBot,double cost){
-        if(buyingBot.getCash() < cost){
+    protected synchronized void listBuyOrder(Stock s){
+        if(buyOrders.containsKey(s.getStockName())) {
+            Market.getStockListing(s.getStockName()).unListBuyOrder(buyOrders.get(s.getStockName()));
+            buyOrders.remove(s.getStockName());
+            s.addShares(buyOrders.get(s.getStockName()).getShareCount());
+        }
+            buyOrders.put(s.getStockName(), s);
+
+        // global buy order list for stocklisting
+
+        Market.getStockListing(s.getStockName()).listBuyOrder(s);
+    }
+
+    public synchronized boolean checkBuy(double cost){
+        if(getCash() < cost){
             return false;
         }else{
             return true;
@@ -105,6 +144,18 @@ public abstract class TradingBotBasic {
 
     protected synchronized double getCash(){
         return this.cash;
+    }
+
+    public int getWealth(){
+        return this.wealth;
+    }
+
+    public void initialStockGiven(int amount,String stockName){
+        if(stockHeld.get(stockName) != null) {
+            stockHeld.get(stockName).addShares(amount);
+        }else{
+            stockHeld.put(stockName,new Stock(amount,stockName,0,this));
+        }
     }
 
 

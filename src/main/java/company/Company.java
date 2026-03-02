@@ -3,11 +3,13 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import market.GlobalClock;
+import market.Market;
 import market.StockListing;
 
 public class Company{
 
     private String name;
+    private int foundingYear;
     private StockListing stock;
     private ArrayList<FinancialReport> quarterlyFinances = new ArrayList<>();
     private ArrayList<FinancialReport> annualFinances = new ArrayList<>();
@@ -26,9 +28,18 @@ public class Company{
     private int debtStreak;
     Random R = new Random();
 
+    private Float sixMonthCompanyGrowth = null;
+    private Float avgSixMonthCompanyGrowth = null;
+    private Float fiveYearCompanyGrowth = null;
+    private Float avgFiveYearCompanyGrowth = null;
+
+
+
+
+
     public Company(String name,int yearsExisted){
             
-
+            foundingYear = 2000-yearsExisted;
             annualReportDay = R.nextInt(1,366);
             quarterlyReportDay = R.nextInt(1,91);
             
@@ -53,28 +64,28 @@ public class Company{
                 previousRevenue = R.nextInt(0,20000000); // 0 to 20 million
                 previousExpenses = R.nextInt(15000, 20000000); // 15 thousand to 20 million
 
-                startingShares = R.nextInt(100000,10000000); // 100 thousand to 10 million
+                startingShares = R.nextInt(100000,1000000); // 100 thousand to 1 million
             }else if(size == 2){
                 previousAssets = R.nextInt(100000000,1000000000); // 100 million to 1 billion
                 previousLiabilities = R.nextInt(100000000,1000000000); // 100 million to 1 billion
                 previousRevenue = R.nextInt(10000,500000000); // 10 thousand to 500 million
                 previousExpenses = R.nextInt(500000, 500000000); // 500 thousand to 500 million
 
-                startingShares = R.nextInt(1000000,100000000); // 1 million to 100 million
+                startingShares = R.nextInt(1000000,2000000); // 1 million to 2 million
             }else if(size == 3){
                 previousAssets = R.nextLong(1000000000,100000000000L); // 1 billion to 100 billion
                 previousLiabilities = R.nextLong(1000000000,100000000000L); // 1 billion to 100 billion
                 previousRevenue = R.nextLong(1000000000,80000000000L); // 1 billion to 80 billion
                 previousExpenses = R.nextLong(1000000000,100000000000L); // 1 billion to 100 billion
 
-                startingShares = R.nextInt(100000000,700000000); // 100 million to 700 million
+                startingShares = R.nextInt(1000000,2000000); // 1 million to 2 million
             }else if(size == 4){
                 previousAssets = R.nextLong(100000000000L,5000000000000L); // 100 billion to 5 Trillion
                 previousLiabilities = R.nextLong(100000000000L,5000000000000L); // 100 billion to 5 Trillion
                 previousRevenue = R.nextLong(100000000000L,700000000000L); // 100 billion to 700 billion
                 previousExpenses = R.nextLong(100000000000L,700000000000L); // 100 billion to 700 billion
 
-                startingShares = R.nextInt(1000000000,2100000000); // 1 billion to 2.1 billion
+                startingShares = R.nextInt(10000000,20000000); // 10 million to 20 million
             }
 
             
@@ -100,23 +111,42 @@ public class Company{
             name = name.strip();
             
             String stockName = "";
-
-            if(name.length() < 4){
-                stockName = name;
-            }else if(name.length() > 3 && name.length() < 13){
-                stockName += name.charAt(0);
-                stockName += name.charAt(R.nextInt(1,name.length()/2));
-                stockName += name.charAt(R.nextInt(name.length() / 2,name.length() - 1));
-            }else{
-                for(int i = 0; i < 4;i++){
-                    stockName += name.charAt(R.nextInt(1,name.length() / 4));
+            int j = 0;
+            while(stockName == "" || Market.getStockListing(stockName) != null) {
+                if (name.length() < 4) {
+                    stockName = name;
+                } else if (name.length() > 3 && name.length() < 13) {
+                    stockName += name.charAt(0);
+                    stockName += name.charAt(R.nextInt(1, name.length() / 2));
+                    stockName += name.charAt(R.nextInt(name.length() / 2, name.length() - 1));
+                } else {
+                    for (int i = 0; i < 4; i++) {
+                        stockName += name.charAt(R.nextInt(1, name.length() / 4));
+                    }
+                }
+                stockName = stockName.toUpperCase();
+                if(j > 50){
+                    stockName = Market.getIncrementingName();
+                }else{
+                    j++;
                 }
             }
-            stockName = stockName.toUpperCase();
 
             stock = new StockListing(startingShares,previousAssets - previousLiabilities,stockName,this);
 
             generateHistoricalFinancialReports(yearsExisted);
+            updateAvgGrowthValue();
+        }
+
+
+
+    public void updateDay(int day){
+        if(quarterlyReportDay == day){
+            generateFinancialReport('q',0,0);
+        }
+        if(annualReportDay == day){
+            generateFinancialReport('a',0,0);
+        }
     }
 
     public void generateFinancialReport(char type,int historicalYear,int historicalQuarter){
@@ -324,18 +354,11 @@ public class Company{
         }
     }  
 
-
-
-
-    
-    
-
-        
-
-
     }
 
     public void generateHistoricalFinancialReports(int years){
+
+        
 
         int oldYear = GlobalClock.getYear() - years;
         for(int i = 0; i < years; i++){
@@ -348,4 +371,122 @@ public class Company{
 
     }
 
+    public Float getOneYearCompanyGrowth(){
+        if(annualFinances.size() >= 2){
+
+            float rev = ((float)annualFinances.get(annualFinances.size() - 1).getRevenue() / annualFinances.get(annualFinances.size() - 2).getRevenue()) - 1;
+            float exp = ((float)annualFinances.get(annualFinances.size() - 1).getExpenses() / annualFinances.get(annualFinances.size() - 2).getExpenses()) - 1;
+            float ass = ((float)annualFinances.get(annualFinances.size() - 1).getAssets() / annualFinances.get(annualFinances.size() - 2).getAssets()) - 1;
+            float lib = ((float)annualFinances.get(annualFinances.size() - 1).getLiabilities() / annualFinances.get(annualFinances.size() - 2).getLiabilities()) - 1;
+
+            return ((rev + ass) - (exp + lib)) * 100;
+        }else{
+            return null;
+        }
+    }
+
+    public Float getFiveYearCompanyGrowth(){
+        if(annualFinances.size() >= 20){
+            float rev = ((float)annualFinances.get(annualFinances.size() - 1).getRevenue() / annualFinances.get(annualFinances.size() - 5).getRevenue()) - 1;
+            float exp = ((float)annualFinances.get(annualFinances.size() - 1).getExpenses() / annualFinances.get(annualFinances.size() - 5).getExpenses()) - 1;
+            float ass = ((float)annualFinances.get(annualFinances.size() - 1).getAssets() / annualFinances.get(annualFinances.size() - 5).getAssets()) - 1;
+            float lib = ((float)annualFinances.get(annualFinances.size() - 1).getLiabilities() / annualFinances.get(annualFinances.size() - 5).getLiabilities()) - 1;
+
+            return ((rev + ass) - (exp + lib)) * 100;
+        }else{
+            return null;
+        }
+    }
+
+    public void initialAvgGrowthValue(){
+
+        int size = quarterlyFinances.size();
+
+            if(size >= 20){
+                float avgRevenue = 0;
+                float avgExpense = 0;
+                float avgAssets = 0;
+                float avgLiabilities = 0;
+
+                for(int i = size - 19; i < size; i++){
+                    avgRevenue += ((float)quarterlyFinances.get(i).getRevenue() / quarterlyFinances.get(i - 1).getRevenue()) - 1;
+                    avgExpense += ((float)quarterlyFinances.get(i).getExpenses() / quarterlyFinances.get(i - 1).getExpenses()) - 1;
+                    avgAssets += ((float)quarterlyFinances.get(i).getAssets() / quarterlyFinances.get(i - 1).getAssets()) - 1;
+                    avgLiabilities += ((float)quarterlyFinances.get(i).getLiabilities() / quarterlyFinances.get(i - 1).getLiabilities()) - 1;
+                }
+
+                avgFiveYearCompanyGrowth = ((avgRevenue + avgAssets) - (avgLiabilities + avgExpense) * 100);
+
+            }
+
+    }
+
+    // REMINDER: R1 --- R2 covers six months with 2 reports if r1 and r2 are quarterly reports
+    public void updateAvgGrowthValue(){
+        int size = quarterlyFinances.size();
+        float threeMonthGrowth = 0;
+        if(size >= 3){
+
+            float avgRevenue = ((float)quarterlyFinances.get(size - 1).getRevenue() / quarterlyFinances.get(size - 2).getRevenue()) - 1;
+            float avgExpense = ((float)quarterlyFinances.get(size - 1).getExpenses() / quarterlyFinances.get(size - 2).getExpenses()) - 1;
+            float avgAssets = ((float)quarterlyFinances.get(size - 1).getAssets() / quarterlyFinances.get(size - 2).getAssets()) - 1;
+            float avgLiabilities = ((float)quarterlyFinances.get(size - 1).getLiabilities() / quarterlyFinances.get(size - 2).getLiabilities()) - 1;
+
+            threeMonthGrowth = ((avgRevenue + avgAssets) - (avgLiabilities + avgExpense) * 100);
+
+            avgRevenue = ((float)quarterlyFinances.get(size - 2).getRevenue() / quarterlyFinances.get(size - 3).getRevenue()) - 1;
+            avgExpense = ((float)quarterlyFinances.get(size - 2).getExpenses() / quarterlyFinances.get(size - 3).getExpenses()) - 1;
+            avgAssets = ((float)quarterlyFinances.get(size - 2).getAssets() / quarterlyFinances.get(size - 3).getAssets()) - 1;
+            avgLiabilities = ((float)quarterlyFinances.get(size - 2).getLiabilities() / quarterlyFinances.get(size - 3).getLiabilities()) - 1;
+
+            avgSixMonthCompanyGrowth = ((avgRevenue + avgAssets) - (avgLiabilities + avgExpense) * 100) + threeMonthGrowth;
+
+        }
+
+        if(avgFiveYearCompanyGrowth != null){
+            float avgRevenue = ((float)quarterlyFinances.get(size - 19).getRevenue() / quarterlyFinances.get(size - 20).getRevenue()) - 1;
+            float avgExpense = ((float)quarterlyFinances.get(size - 19).getExpenses() / quarterlyFinances.get(size - 20).getExpenses()) - 1;
+            float avgAssets = ((float)quarterlyFinances.get(size - 19).getAssets() / quarterlyFinances.get(size - 20).getAssets()) - 1;
+            float avgLiabilities = ((float)quarterlyFinances.get(size - 19).getLiabilities() / quarterlyFinances.get(size - 20).getLiabilities()) - 1;
+
+
+            avgFiveYearCompanyGrowth -= ((avgRevenue + avgAssets) - (avgLiabilities + avgExpense) * 100);
+            avgFiveYearCompanyGrowth += threeMonthGrowth;
+
+        }else if(avgFiveYearCompanyGrowth == null && size >= 20){
+            initialAvgGrowthValue();
+        }
+    }
+
+    public ArrayList<FinancialReport> getQuarterlyFinances(){
+        return this.quarterlyFinances;
+    }
+
+    public ArrayList<FinancialReport> getAnnualFinances(){
+        return this.annualFinances;
+    }
+
+    public double getCompanySize(){
+        return (double)((previousRevenue + previousAssets) - (previousExpenses + previousLiabilities)) / 1000;
+    }
+
+    public float getAvgSixMonthCompanyGrowth(){
+        return avgSixMonthCompanyGrowth;
+    }
+
+    public float getAvgFiveYearCompanyGrowth(){
+        return avgFiveYearCompanyGrowth;
+    }
+
+    public int getSize(){
+        return this.size;
+    }
+
+    public int getFoundingYear(){
+        return this.foundingYear;
+    }
+
+    public StockListing getStockListing(){
+        return this.stock;
+    }
 }
