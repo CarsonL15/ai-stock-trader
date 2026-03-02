@@ -86,7 +86,7 @@ public class Market {
         ArrayList<StatsCompareObject> top5000 = new ArrayList<>();
 
         for(StockListing s : stocks.values()){
-            top5000.add(new StatsCompareObject(s.getSixMonthGrowthValue(),s,null));
+            top5000.add(new StatsCompareObject(s.getSixMonthGrowth(),s,null));
         }
         return extractTop200StockListing(top5000);
     }
@@ -95,7 +95,7 @@ public class Market {
         ArrayList<StatsCompareObject> top5000 = new ArrayList<>();
 
         for(StockListing s : stocks.values()){
-            top5000.add(new StatsCompareObject(s.getFiveYearGrowthValue(),s,null));
+            top5000.add(new StatsCompareObject(s.getFiveYearGrowth(),s,null));
         }
         return extractTop200StockListing(top5000);
     }

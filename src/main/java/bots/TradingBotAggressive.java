@@ -20,7 +20,7 @@ public class TradingBotAggressive extends TradingBotBasic {
         shortTerm = (R.nextInt(1, 11) <= 7) ? true : false;
         futureAbility = (R.nextInt(1, 11) <= 7) ? true : false;
         hypeAffect = (R.nextInt(1, 11) <= 7) ? true : false;
-        trust = (R.nextInt(1, 11) <= 5) ? true : false;
+        trust = (R.nextInt(1, 11) <= 3) ? true : false;
         responseTime = 0;
 
 
@@ -137,13 +137,104 @@ public class TradingBotAggressive extends TradingBotBasic {
         }
 
         if (sellStocks) { // looks to sell stock
-            int size = stockHeld.size();
+            for (Stock s : stockHeld.values()) {
+                if (idiot >= 7 && shortTerm) {
+                    if (trust && Market.getStockListing(s.getStockName()).getSixMonthGrowth() < -0.3) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this), false);
+                    } else if (!trust && Market.getStockListing(s.getStockName()).getSixMonthGrowth() < -0.1) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.8, .9), this), false);
+                    }
+                }
+
+                if (idiot <= 6 && shortTerm) {
+                    if (trust && Market.getStockListing(s.getStockName()).getAvgSixMonthGrowth() < -0.3) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this), false);
+                    } else if (!trust && Market.getStockListing(s.getStockName()).getAvgSixMonthGrowth() < -0.1) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.8, .9), this), false);
+                    }
+                }
+
+                if (hypeAffect) {
+                    if (Market.getStockListing(s.getStockName()).getHype() < -50) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.4, .5), this), false);
+                    } else if (Market.getStockListing(s.getStockName()).getHype() < 0) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.5, .8), this), false);
+                    } else if (Market.getStockListing(s.getStockName()).getHype() < 20) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this), false);
+                    } else if (Market.getStockListing(s.getStockName()).getHype() > 50) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.4, 1.5), this), false);
+                    } else if (Market.getStockListing(s.getStockName()).getHype() > 80) {
+                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.7, 1.8), this), false);
+                    }
+                }
+
+
+            }
+
+            if (stockHeld.size() > 3) {
+
+                int size = (int) (stockHeld.size() / .3);
+                ArrayList<Stock> tempStockOwned = (ArrayList<Stock>) stockHeld.values();
+
+
+                for (int i = 0; i < size; i++) {
+
+                    Stock temp = tempStockOwned.get(R.nextInt(0, stockHeld.size()));
+                    listSellOrder(new Stock((int) (temp.getShareCount() * (R.nextInt(1, 101) / 100)), temp.getStockName(), Market.getStockListing(temp.getStockName()).getLastSalePrice() * (float) R.nextDouble(-.1, .1), this), false);
+                }
+            }
 
 
         }
 
         /* This section looks at existing buy and sell orders and updates them based on their personalities/traits  starts with buy orders
            ends with sell orders */
+
+        for (Stock s : buyOrders.values()) {
+            if (idiot >= 7 && shortTerm) {
+                if ((Market.getStockListing(s.getStockName()).getLastSalePrice() - 1) / s.getPrice() < -0.2) { // if the price drops by 20% or more
+
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this));
+
+                } else if ((Market.getStockListing(s.getStockName()).getLastSalePrice() - 1) / s.getPrice() > 0.2) { // if the price raises by 20% or more
+
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.1, 1.4), this));
+
+                }
+            }
+            if (idiot <= 6 && shortTerm) {
+                if (Market.getStockListing(s.getStockName()).getAvgSixMonthGrowth() < -0.2) { // if the price drops by 20% or more on average
+
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this));
+
+                } else if (Market.getStockListing(s.getStockName()).getAvgSixMonthGrowth() > 0.2) { // if the price raises by 20% or more on average
+
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.1, 1.4), this));
+
+                }
+            }
+
+            if (hypeAffect) {
+                if (Market.getStockListing(s.getStockName()).getHype() < -50) {
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.4, .5), this));
+                } else if (Market.getStockListing(s.getStockName()).getHype() < 0) {
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.5, .8), this));
+                } else if (Market.getStockListing(s.getStockName()).getHype() < 20) {
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this));
+                } else if (Market.getStockListing(s.getStockName()).getHype() > 50) {
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.4, 1.5), this));
+                } else if (Market.getStockListing(s.getStockName()).getHype() > 80) {
+                    listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.7, 1.8), this));
+                }
+            }
+
+
+            if ((Market.getStockListing(s.getStockName()).getLastSalePrice() - 1) <= -0.3) {
+                listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.7, .8), this));
+            } else if ((Market.getStockListing(s.getStockName()).getLastSalePrice() - 1) >= 0.3) {
+                listBuyOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.1, 1.3), this));
+            }
+        }
 
 
         for (Stock s : sellOrders.values()) {
@@ -158,19 +249,38 @@ public class TradingBotAggressive extends TradingBotBasic {
                     listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.1, 1.4), this), true);
 
                 }
-                if (idiot <= 6 && shortTerm) {
-                    if (Market.getStockListing(s.getStockName()).getAvgSixMonthGrowth() < -0.2) { // if the price drops by 20% or more on average
+            }
+            if (idiot <= 6 && shortTerm) {
+                if (Market.getStockListing(s.getStockName()).getAvgSixMonthGrowth() < -0.2) { // if the price drops by 20% or more on average
 
-                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this), true);
+                    listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this), true);
 
-                    } else if (Market.getStockListing(s.getStockName()).getLastSalePrice() > 0.2) { // if the price raises by 20% or more on average
+                } else if (Market.getStockListing(s.getStockName()).getAvgSixMonthGrowth() > 0.2) { // if the price raises by 20% or more on average
 
-                        listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.1, 1.4), this), true);
+                    listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.1, 1.4), this), true);
 
-                    }
                 }
+            }
+
+            if (hypeAffect) {
+                if (Market.getStockListing(s.getStockName()).getHype() < -50) {
+                    listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.4, .5), this), true);
+                } else if (Market.getStockListing(s.getStockName()).getHype() < 0) {
+                    listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.5, .8), this), true);
+                } else if (Market.getStockListing(s.getStockName()).getHype() < 20) {
+                    listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.6, .9), this), true);
+                } else if (Market.getStockListing(s.getStockName()).getHype() > 50) {
+                    listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.4, 1.5), this), true);
+                } else if (Market.getStockListing(s.getStockName()).getHype() > 80) {
+                    listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.7, 1.8), this), true);
+                }
+            }
 
 
+            if ((Market.getStockListing(s.getStockName()).getLastSalePrice() - 1) <= -0.3) {
+                listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(.7, .8), this), true);
+            } else if ((Market.getStockListing(s.getStockName()).getLastSalePrice() - 1) >= 0.3) {
+                listSellOrder(new Stock(s.getShareCount(), s.getStockName(), s.getPrice() * (float) R.nextDouble(1.1, 1.3), this), true);
             }
 
 

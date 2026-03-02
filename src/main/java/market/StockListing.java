@@ -153,7 +153,7 @@ public class StockListing{
 
     }
 
-    public Float getSixMonthGrowthValue(){
+    public Float getSixMonthGrowth(){
         if(priceHistory.size() >= 6){
             return ((priceHistory.get(priceHistory.size() - 1) / priceHistory.get(priceHistory.size() - 6)) - 1) * 100;
         }else{
@@ -161,7 +161,7 @@ public class StockListing{
         }
     }
 
-    public Float getFiveYearGrowthValue(){
+    public Float getFiveYearGrowth(){
         if(priceHistory.size() >= 60){
             return ((priceHistory.get(priceHistory.size() - 1) / priceHistory.get(priceHistory.size() - 60)) - 1) * 100;
         }else{
