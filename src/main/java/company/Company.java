@@ -28,9 +28,7 @@ public class Company{
     private int debtStreak;
     Random R = new Random();
 
-    private Float sixMonthCompanyGrowth = null;
     private Float avgSixMonthCompanyGrowth = null;
-    private Float fiveYearCompanyGrowth = null;
     private Float avgFiveYearCompanyGrowth = null;
 
 

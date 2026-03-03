@@ -221,7 +221,7 @@ public class StockListing{
         if(avgPreviousFiveYearPercent != null){
             avgPreviousFiveYearPercent -= (priceHistory.get(size - 60) /priceHistory.get(size  - 61)) - 1;
             avgPreviousFiveYearPercent += (priceHistory.get(size - 1) /priceHistory.get(size  - 2)) - 1;
-            avgSixMonthG = avgPreviousFiveYearPercent;
+            avgFiveYearG = avgPreviousFiveYearPercent;
         }else if(avgPreviousFiveYearPercent == null && size >= 60){
             InitialAvgGrowthValues();
         }
@@ -279,6 +279,10 @@ public class StockListing{
 
     public float getLastSalePrice(){
         return currentPrice;
+    }
+
+    public Company getCompany(){
+        return associatedCompany;
     }
 
             
