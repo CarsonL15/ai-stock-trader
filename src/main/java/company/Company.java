@@ -28,8 +28,8 @@ public class Company{
     private int debtStreak;
     Random R = new Random();
 
-    private Float avgSixMonthCompanyGrowth = null;
-    private Float avgFiveYearCompanyGrowth = null;
+    private Float avgSixMonthCompanyGrowth = 0f;
+    private Float avgFiveYearCompanyGrowth = 0f;
 
 
 
@@ -119,7 +119,7 @@ public class Company{
                     stockName += name.charAt(R.nextInt(name.length() / 2, name.length() - 1));
                 } else {
                     for (int i = 0; i < 4; i++) {
-                        stockName += name.charAt(R.nextInt(1, name.length() / 4));
+                        stockName += name.charAt(R.nextInt(i * (name.length() / 4), (1 + i) * (name.length() / 4)));
                     }
                 }
                 stockName = stockName.toUpperCase();
@@ -379,7 +379,7 @@ public class Company{
 
             return ((rev + ass) - (exp + lib)) * 100;
         }else{
-            return null;
+            return 0f;
         }
     }
 
@@ -392,7 +392,7 @@ public class Company{
 
             return ((rev + ass) - (exp + lib)) * 100;
         }else{
-            return null;
+            return 0f;
         }
     }
 
@@ -441,7 +441,7 @@ public class Company{
 
         }
 
-        if(avgFiveYearCompanyGrowth != null){
+        if(avgFiveYearCompanyGrowth != 0){
             float avgRevenue = ((float)quarterlyFinances.get(size - 19).getRevenue() / quarterlyFinances.get(size - 20).getRevenue()) - 1;
             float avgExpense = ((float)quarterlyFinances.get(size - 19).getExpenses() / quarterlyFinances.get(size - 20).getExpenses()) - 1;
             float avgAssets = ((float)quarterlyFinances.get(size - 19).getAssets() / quarterlyFinances.get(size - 20).getAssets()) - 1;
@@ -451,7 +451,7 @@ public class Company{
             avgFiveYearCompanyGrowth -= ((avgRevenue + avgAssets) - (avgLiabilities + avgExpense) * 100);
             avgFiveYearCompanyGrowth += threeMonthGrowth;
 
-        }else if(avgFiveYearCompanyGrowth == null && size >= 20){
+        }else if(avgFiveYearCompanyGrowth == 0 && size >= 20){
             initialAvgGrowthValue();
         }
     }

@@ -1,55 +1,77 @@
 package market;
 import bots.TradingBotAggressive;
 import bots.TradingBotBasic;
+import bots.TradingBotMedium;
+import bots.TradingBotPassive;
 import company.Company;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.Scanner;
 
 public class SetupMarket extends Market {
     
 
 
-    public static void main(String args[]){
+    public static void main(String[] args){
 
-        ArrayList<TradingBotBasic> bots = new ArrayList<>();
-        bots.add(new TradingBotAggressive());
-        setBots(bots);
-        GlobalClock time = new GlobalClock();
-//        Company c1 = new Company("Glork",10);
 
         HashMap<String,StockListing> stocks = new HashMap<>();
         HashMap<String, Company> companies = new HashMap<>();
+        ArrayList<TradingBotBasic> bots = new ArrayList<>();
+        Scanner companyNameScanner = null;
+        Random R = new Random();
+
+        File f1 = new File("./CompanyNames.txt");
+        //System.out.println(f1.exists());
+
+        try {
+            companyNameScanner = new Scanner(f1);
+        }catch (FileNotFoundException e){
+            System.out.println("Cannot find the file with company names");
+            System.exit(0);
+        }
+
+        for(int i = 0; i < 5000; i++){
+            bots.add(new TradingBotPassive());
+            bots.add(new TradingBotAggressive());
+            bots.add(new TradingBotMedium());
+        }
 
 
-        companies.put("Glorck",new Company("Glorck",10));
-        stocks.put(companies.get("Glorck").getStockListing().getName(),companies.get("Glorck").getStockListing());
+        setBots(bots);
+
+        for(int i = 0; i < 5000; i++){
+            if(!companyNameScanner.hasNextLine()){
+                System.out.println("Warning less than 5000 company names detected, program may become unstable");
+                break;
+            }
+            String name = companyNameScanner.nextLine();
+            Company tempCompany = new Company(name,R.nextInt(1,100));
+            companies.put(name,tempCompany);
+            //stocks.put(tempCompany.getStockListing().getName(),tempCompany.getStockListing());
+            addStock(tempCompany.getStockListing());
+        }
+
+
+
 
         setCompanies(companies);
-        setStocks(stocks);
+        //setStocks(stocks);
 
-        //Market mainMarket = new Market(stocks,companies,bots);
-
-//        OrderQueue buyQueue = new OrderQueue();
-        Random R = new Random();
-        //StockListing s1 = c1.getStockListing();
-        //TradingBotBasic bot1 = new TradingBotBasic();
+        setupThreads();
+        GlobalClock time = new GlobalClock();
 
 
 
 
 
 
-        System.out.println("done with test");
-        while(true){
-            try{
-            Thread.sleep(4000);
-            System.out.print("");
-            }catch (InterruptedException e){
-
-            }
-        }
+        System.out.println("done with setup");
+        loopUpdate();
 
 
         

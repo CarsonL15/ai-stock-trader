@@ -1,5 +1,6 @@
 package bots;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Random;
 
@@ -27,7 +28,7 @@ public abstract class TradingBotBasic {
 
     Random R;
 
-    protected abstract void evaluate();
+    public abstract void evaluate();
 
     public synchronized void completeBuyOrder(Stock s){
         if(buyOrders.get(s.getStockName()) != null &&  s.getPrice() <= buyOrders.get(s.getStockName()).getPrice()){
@@ -84,6 +85,11 @@ public abstract class TradingBotBasic {
     }
 
     protected synchronized void listSellOrder(Stock s, boolean reList){
+
+        // if
+//        if(!reList && !stockHeld.containsKey(s.getStockName())){ // order has been prosesee
+//            return;
+//        }
         // local sell order list
         if(!reList) { // if this order is being made not updated then we dont remove out of their personal stock
             if (s.getShareCount() == stockHeld.get(s.getStockName()).getShareCount()) {
@@ -95,8 +101,8 @@ public abstract class TradingBotBasic {
 
         if(sellOrders.containsKey(s.getStockName())) {
             Market.getStockListing(s.getStockName()).unListSellOrder(sellOrders.get(s.getStockName()));
-            sellOrders.remove(s.getStockName());
             s.addShares(sellOrders.get(s.getStockName()).getShareCount());
+            sellOrders.remove(s.getStockName());
         }
         sellOrders.put(s.getStockName(), s);
 
@@ -109,8 +115,8 @@ public abstract class TradingBotBasic {
     protected synchronized void listBuyOrder(Stock s){
         if(buyOrders.containsKey(s.getStockName())) {
             Market.getStockListing(s.getStockName()).unListBuyOrder(buyOrders.get(s.getStockName()));
-            buyOrders.remove(s.getStockName());
             s.addShares(buyOrders.get(s.getStockName()).getShareCount());
+            buyOrders.remove(s.getStockName());
         }
             buyOrders.put(s.getStockName(), s);
 
@@ -158,5 +164,31 @@ public abstract class TradingBotBasic {
         }
     }
 
+
+    public static class BotThread implements Runnable {
+
+        ArrayList<TradingBotBasic> botList;
+
+        public BotThread(ArrayList<TradingBotBasic> botList){
+            this.botList = botList;
+        }
+
+        @Override
+        public void run(){
+            int i = 0;
+            //try {
+
+            for (TradingBotBasic b : botList) {
+                b.evaluate();
+                i++;
+
+
+            }
+            System.out.println(Thread.currentThread().getName() + " finished " + i + " evals");
+            //}catch (ConcurrentModificationException e){
+
+            //}
+        }
+    }
 
 }

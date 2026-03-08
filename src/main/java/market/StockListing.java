@@ -4,6 +4,7 @@ import java.util.Random;
 
 import bots.TradingBotBasic;
 import company.Company;
+import market.orders.OrderQueue;
 
 public class StockListing{
 
@@ -157,7 +158,7 @@ public class StockListing{
         if(priceHistory.size() >= 6){
             return ((priceHistory.get(priceHistory.size() - 1) / priceHistory.get(priceHistory.size() - 6)) - 1) * 100;
         }else{
-            return null;
+            return 0f;
         }
     }
 
@@ -165,7 +166,7 @@ public class StockListing{
         if(priceHistory.size() >= 60){
             return ((priceHistory.get(priceHistory.size() - 1) / priceHistory.get(priceHistory.size() - 60)) - 1) * 100;
         }else{
-            return null;
+            return 0f;
         }
     }
 
@@ -174,7 +175,7 @@ public class StockListing{
         int size = priceHistory.size();
 
         
-            if(size >= 6){
+            if(size >= 7){
                 float tempPrice = priceHistory.get(size - 6);
                 float percent = 0;
                 
@@ -191,7 +192,7 @@ public class StockListing{
                 }
 
                 
-                if(size >= 60){
+                if(size >= 61){
                     tempPrice = priceHistory.get(size - 60);
                     for(int i = size - 59; i <= size - 1; i++){
                     percent += (priceHistory.get(i) / tempPrice) - 1;

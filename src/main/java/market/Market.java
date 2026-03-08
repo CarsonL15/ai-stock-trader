@@ -1,10 +1,14 @@
 package market;
 import java.util.*;
 
+//import ThreadHandlers.BotThread;
 import bots.TradingBotBasic;
 import company.StatsCompareObject;
 import company.Company;
 import company.StatsComparator;
+import market.orders.GlobalOrderQueue;
+import market.orders.OrderQueue;
+import market.orders.QueueForOrderUpdates;
 
 public class Market {
 
@@ -27,6 +31,14 @@ public class Market {
     private static ArrayList<Company> largestCompanies = new ArrayList<>();
     private static ArrayList<StockListing> largestStocks = new ArrayList<>();
 
+    private static ArrayList<Thread> botThreadStorage;
+    private static ArrayList<Thread> transactionHandlers;
+    private static GlobalOrderQueue orderMarket;
+    private static QueueForOrderUpdates orderStorage;
+    private static Thread orderQueuer = new Thread(new OrderEnqueueThread(),"OrderQueuer");
+    private static Thread dayThread;
+    private static Thread monthThread;
+
 
 
 //    public Market(HashMap<String,StockListing> stocks,HashMap<String,Company> companies, ArrayList<TradingBotBasic> bots ){
@@ -44,6 +56,10 @@ public class Market {
         Market.bots = bots;
     }
 
+    public static GlobalOrderQueue getOrders(){
+        return orderMarket;
+    }
+
     protected static void setCompanies(HashMap<String,Company> companies){
         Market.companies = companies;
     }
@@ -52,33 +68,57 @@ public class Market {
         Market.stocks = stocks;
     }
 
+    protected static void addStock(StockListing s){
+        Market.stocks.put(s.getName(),s);
+    }
+
+    protected static void setupThreads(){
+        botThreadStorage = new ArrayList<>();
+        UpdateMonth.initialSetupForTop200();
+        orderMarket = new GlobalOrderQueue();
+        orderStorage = new QueueForOrderUpdates();
+
+//        botThreadStorage.add(new Thread(new TradingBotBasic.BotThread(new ArrayList<>(bots.subList(0,300))),"botThread1"));
+//        botThreadStorage.get(0).start();
+
+
+
+        transactionHandlers = new ArrayList<>();
+        for(int i = 0; i < 4; i++){
+            transactionHandlers.add(new Thread(new OrderQueue.OrderQueueThread(orderMarket),"OrderHandler " + i));
+            transactionHandlers.get(i).start();
+        }
+        orderQueuer.start();
+
+
+
+    }
+
+    public static void updateGlobalOrderQueue(OrderQueue q){
+        orderStorage.enqueue(q);
+    }
+
 
 
     public static void dayChanged(int day){
         
-        for(Company c : companies.values()){
-            c.updateDay(day);
-        }
+        dayThread = new Thread(new UpdateDay(day),"DayThread");
+        dayThread.start();
+
+        int section = bots.size() / 4;
+        botThreadStorage.clear();
+
+            for (int i = 0; i < 4; i++) {
+                botThreadStorage.add(new Thread(new TradingBotBasic.BotThread(new ArrayList<>(bots.subList(section * i, (section * (i + 1)) - 1))),"BotThread-" + i));
+                botThreadStorage.get(i).start();
+            }
+
+
+
     }
 
     public static void monthChanged(int month){
-        for(StockListing s : stocks.values()){
-            s.monthUpdated();
-        }
-        bestStockFastGrowth = calculateStockSixMonthGrowth();
-        bestStockSlowGrowth = calculateStockFiveYearGrowth();
-        bestAvgStockFastGrowth = calculateAvgStockSixMonthGrowth();
-        bestAvgStockSlowGrowth = calculateAvgStockFiveYearGrowth();
-
-        mostHyped = calculateHype(true);
-        leastHyped = calculateHype(false);
-        largestStocks = calculateLargestStocks();
-
-        bestCompanySlowGrowth = calculateFiveYearCompanyGrowth();
-        bestCompanyFastGrowth = calculateOneYearCompanyGrowth();
-        bestAvgCompanySlowGrowth = calculateAvgFiveYearCompanyGrowth();
-        bestAvgCompanyFastGrowth = calculateAvgSixMonthCompanyGrowth();
-        largestCompanies = calculateLargestCompanies();
+        monthThread = new Thread(new UpdateMonth(),"MonthThread");
 
     }
 
@@ -276,7 +316,7 @@ public class Market {
     }
 
     public static ArrayList<StockListing> getListOfStocks(){
-        return (ArrayList<StockListing>)stocks.values();
+        return new ArrayList<>(stocks.values());
     }
 
     public static Company getCompany(String companyName){
@@ -298,6 +338,91 @@ public class Market {
             GLOBAL_INCREMENTING_NAME = Integer.toString(temp);
         }
         return GLOBAL_INCREMENTING_NAME;
+    }
+
+    public static class OrderEnqueueThread implements Runnable{
+
+
+        @Override
+        public void run(){
+            while(true){
+
+                orderMarket.enqueue(orderStorage.dequeue());
+            }
+        }
+    }
+
+    public static class UpdateMonth implements Runnable{
+
+
+
+        @Override
+        public void run(){
+            for(StockListing s : stocks.values()){
+                s.monthUpdated();
+            }
+
+            bestStockFastGrowth = calculateStockSixMonthGrowth();
+            bestStockSlowGrowth = calculateStockFiveYearGrowth();
+            bestAvgStockFastGrowth = calculateAvgStockSixMonthGrowth();
+            bestAvgStockSlowGrowth = calculateAvgStockFiveYearGrowth();
+
+            mostHyped = calculateHype(true);
+            leastHyped = calculateHype(false);
+            largestStocks = calculateLargestStocks();
+
+            bestCompanySlowGrowth = calculateFiveYearCompanyGrowth();
+            bestCompanyFastGrowth = calculateOneYearCompanyGrowth();
+            bestAvgCompanySlowGrowth = calculateAvgFiveYearCompanyGrowth();
+            bestAvgCompanyFastGrowth = calculateAvgSixMonthCompanyGrowth();
+            largestCompanies = calculateLargestCompanies();
+
+
+        }
+
+        public static void initialSetupForTop200(){
+            bestStockFastGrowth = calculateStockSixMonthGrowth();
+            bestStockSlowGrowth = calculateStockFiveYearGrowth();
+            bestAvgStockFastGrowth = calculateAvgStockSixMonthGrowth();
+            bestAvgStockSlowGrowth = calculateAvgStockFiveYearGrowth();
+
+            mostHyped = calculateHype(true);
+            leastHyped = calculateHype(false);
+            largestStocks = calculateLargestStocks();
+
+            bestCompanySlowGrowth = calculateFiveYearCompanyGrowth();
+            bestCompanyFastGrowth = calculateOneYearCompanyGrowth();
+            bestAvgCompanySlowGrowth = calculateAvgFiveYearCompanyGrowth();
+            bestAvgCompanyFastGrowth = calculateAvgSixMonthCompanyGrowth();
+            largestCompanies = calculateLargestCompanies();
+        }
+    }
+
+    public static class UpdateDay implements Runnable{
+
+        private int day;
+
+        public UpdateDay(int day){
+            this.day = day;
+        }
+
+        @Override
+        public void run(){
+            for(Company c : companies.values()){
+                c.updateDay(day);
+            }
+        }
+    }
+
+    protected static void loopUpdate(){
+        while(true){
+            try{
+                Thread.sleep(4000);
+                System.out.print("");
+            }catch (InterruptedException e){
+
+            }
+        }
     }
     
 
