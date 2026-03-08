@@ -1,0 +1,48 @@
+// Idiot
+/* buying or selling price will be increased or decreased by 1% times the bots idiot factor*/
+
+/* 
+
+
+
+*/
+
+// sustainability 
+/* if sustainability personality, 
+get stocks with highest long term income growth history 
+*/
+
+/*
+
+when buying{
+    
+}
+
+
+*/
+
+// short term
+/* if short term personality, 
+get stocks with the highest recent income growth 
+*/
+
+// future ability
+/* if future ability personality,
+get stocks that have large amount of hype and large promises
+ */
+
+// hype affect
+/* if hype affect personality,
+get stocks with large amount of hype, sell stocks with negative hype
+ */
+
+// Trust
+/* if trust personality, 
+keeps stocks even if negative hype and buy stocks at inflated price
+*/
+
+// Response Time
+/* 
+affects how fast user gets to check balance and react
+*/
+
