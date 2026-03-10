@@ -18,14 +18,13 @@ public class SetupMarket extends Market {
 
     public static void main(String[] args){
 
-
         HashMap<String,StockListing> stocks = new HashMap<>();
         HashMap<String, Company> companies = new HashMap<>();
         ArrayList<TradingBotBasic> bots = new ArrayList<>();
         Scanner companyNameScanner = null;
         Random R = new Random();
 
-        File f1 = new File("./CompanyNames.txt");
+        File f1 = new File("./company_names.txt");
         //System.out.println(f1.exists());
 
         try {
@@ -35,10 +34,10 @@ public class SetupMarket extends Market {
             System.exit(0);
         }
 
-        for(int i = 0; i < 5000; i++){
+        for(int i = 0; i < 15000; i++){
             bots.add(new TradingBotPassive());
-            bots.add(new TradingBotAggressive());
-            bots.add(new TradingBotMedium());
+            //bots.add(new TradingBotAggressive());
+            //bots.add(new TradingBotMedium());
         }
 
 

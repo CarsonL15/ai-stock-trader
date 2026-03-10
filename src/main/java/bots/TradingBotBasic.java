@@ -3,12 +3,19 @@ import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import market.GlobalClock;
 import market.Market;
 import market.Stock;
+import market.StockListing;
 
 public abstract class TradingBotBasic {
-    
+
+    protected Lock buySellLock = new ReentrantLock();
     protected int wealth;
     protected float cash;
     protected HashMap<String,Stock> sellOrders = new HashMap<>();
@@ -34,6 +41,22 @@ public abstract class TradingBotBasic {
         if(buyOrders.get(s.getStockName()) != null &&  s.getPrice() <= buyOrders.get(s.getStockName()).getPrice()){
             internalCompleteBuyOrder(s);
         }
+
+    }
+
+    public synchronized void getBuySellLock(){
+        while(!buySellLock.tryLock()){
+            try {
+                wait();
+            }catch (InterruptedException e){
+
+            }
+        }
+    }
+
+    public synchronized void unlockBuySellLock(){
+        buySellLock.unlock();
+        notifyAll();
     }
 
     public void MonthlySalary(){
@@ -91,7 +114,11 @@ public abstract class TradingBotBasic {
 //            return;
 //        }
         // local sell order list
-        if(!reList) { // if this order is being made not updated then we dont remove out of their personal stock
+        if(s.getShareCount() > Market.getStockListing(s.getStockName()).getTotalShares()){
+            System.out.println("hit");
+        }
+
+        if(!reList) { // if this order is being made not updated then we remove out of their personal stock
             if (s.getShareCount() == stockHeld.get(s.getStockName()).getShareCount()) {
                 stockHeld.remove(s.getStockName());
             } else {
@@ -101,7 +128,6 @@ public abstract class TradingBotBasic {
 
         if(sellOrders.containsKey(s.getStockName())) {
             Market.getStockListing(s.getStockName()).unListSellOrder(sellOrders.get(s.getStockName()));
-            s.addShares(sellOrders.get(s.getStockName()).getShareCount());
             sellOrders.remove(s.getStockName());
         }
         sellOrders.put(s.getStockName(), s);
@@ -115,7 +141,6 @@ public abstract class TradingBotBasic {
     protected synchronized void listBuyOrder(Stock s){
         if(buyOrders.containsKey(s.getStockName())) {
             Market.getStockListing(s.getStockName()).unListBuyOrder(buyOrders.get(s.getStockName()));
-            s.addShares(buyOrders.get(s.getStockName()).getShareCount());
             buyOrders.remove(s.getStockName());
         }
             buyOrders.put(s.getStockName(), s);
@@ -164,13 +189,32 @@ public abstract class TradingBotBasic {
         }
     }
 
+    public synchronized float getCompetentOrderPrice(float price, StockListing s){
+        if(s != null){
+            if(price < 5){ // prevents negative orders
+                return s.getLastSalePrice() * R.nextFloat(0.8f,1f);
+            }else if(price > s.getCompany().getCompanyBalance() * Math.pow(10,s.getCompany().getSize())){
+                return s.getLastSalePrice() * R.nextFloat(.98f,1.04f);
+            }else{
+                return price;
+            }
+        }
+        return 0;
+    }
+
+
+
 
     public static class BotThread implements Runnable {
 
         ArrayList<TradingBotBasic> botList;
+        Random R = new Random();
+        int num;
 
-        public BotThread(ArrayList<TradingBotBasic> botList){
+
+        public BotThread(ArrayList<TradingBotBasic> botList,int num){
             this.botList = botList;
+            this.num = num;
         }
 
         @Override
@@ -178,9 +222,13 @@ public abstract class TradingBotBasic {
             int i = 0;
             //try {
 
-            for (TradingBotBasic b : botList) {
-                b.evaluate();
-                i++;
+
+                for (TradingBotBasic b : botList) {
+                    if(R.nextInt(0,5) == num) {
+                        b.evaluate();
+                        i++;
+                    }
+                    //System.out.println(Thread.currentThread().getName() + " finished " + i + " evals");
 
 
             }
@@ -188,6 +236,7 @@ public abstract class TradingBotBasic {
             //}catch (ConcurrentModificationException e){
 
             //}
+            Market.finishedEval(Thread.currentThread().getName());
         }
     }
 

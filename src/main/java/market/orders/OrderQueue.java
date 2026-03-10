@@ -21,77 +21,99 @@ public class OrderQueue {
             queueOwner = s;
     }
 
-    public void listBuyOrder(Stock s){
+    public  void listBuyOrder(Stock s){
         buyQueue.add(s);
         Market.updateGlobalOrderQueue(this);
     }
 
-    public void unListBuyOrder(Stock s){
+    public  void unListBuyOrder(Stock s){
         buyQueue.remove(s);
     }
 
-    public void listSellOrder(Stock s){
+    public  void listSellOrder(Stock s){
+
         sellQueue.add(s);
         Market.updateGlobalOrderQueue(this);
     }
 
-    public void unListSellOrder(Stock s){
+    public  void unListSellOrder(Stock s){
         sellQueue.remove(s);
     }
 
+    public void addOrderQueueToGlobal(){
+        Market.updateGlobalOrderQueue(this);
+    }
+
     public synchronized void checkOrders(){
-        while(sellQueue.peek() !=null && buyQueue.peek() != null &&  buyQueue.peek().getPrice() >= sellQueue.peek().getPrice()){
-            acquire(sellQueue.peek(),buyQueue.peek());
+//        if(buyQueue.peek() !=null && sellQueue.peek() != null) {
+//            double temp1 = buyQueue.peek().getPrice();
+//
+//            double temp2 = sellQueue.peek().getPrice();
+//            System.out.println("");
+//        }
+
+        while (sellQueue.peek() != null && buyQueue.peek() != null && buyQueue.peek().getPrice() >= sellQueue.peek().getPrice()) {
+            acquire(sellQueue.peek(), buyQueue.peek());
         }
     }
 
 
 
     @SuppressWarnings("DuplicatedCode")
-    protected synchronized boolean acquire(Stock sellOrder, Stock buyOrder){
-        synchronized(buyOrder.getOwner()) {
-            synchronized (sellOrder.getOwner()) {
+    protected synchronized boolean acquire(Stock sellOrder, Stock buyOrder) {
 
 
-                if (sellOrder != null && buyOrder != null && buyOrder.getOwner().checkBuy(sellOrder.getPrice() * buyOrder.getShareCount())) {
-                    if (buyOrder.getShareCount() > sellOrder.getShareCount()) {
-                        Stock tempStock = new Stock(sellOrder.getShareCount(), sellOrder.getStockName(), sellOrder.getPrice(), sellOrder.getOwner());
-                        buyOrder.getOwner().completeBuyOrder(tempStock);
-                        sellOrder.getOwner().completeSellOrder(tempStock);
-
-                        sellQueue.remove(sellOrder);
-                        buyQueue.remove(buyOrder);
-                        buyOrder.removeShares(sellOrder.getShareCount());
-                        buyQueue.put(buyOrder);
+        buyOrder.getOwner().getBuySellLock();
+        sellOrder.getOwner().getBuySellLock();
 
 
-                    } else if (buyOrder.getShareCount() < sellOrder.getShareCount()) {
-                        Stock tempStock = new Stock(buyOrder.getShareCount(), sellOrder.getStockName(), sellOrder.getPrice(), sellOrder.getOwner());
-                        buyOrder.getOwner().completeBuyOrder(tempStock);
-                        sellOrder.getOwner().completeSellOrder(tempStock);
 
-                        buyQueue.remove(sellOrder);
-                        sellQueue.remove(buyOrder);
-                        sellOrder.removeShares(sellOrder.getShareCount());
-                        sellQueue.put(buyOrder);
+        if (sellOrder != null && buyOrder != null && buyOrder.getOwner().checkBuy(sellOrder.getPrice() * buyOrder.getShareCount())) {
+
+            if (buyOrder.getShareCount() > sellOrder.getShareCount()) {
+                Stock tempStock = new Stock(sellOrder.getShareCount(), sellOrder.getStockName(), sellOrder.getPrice(), sellOrder.getOwner());
+                buyOrder.getOwner().completeBuyOrder(tempStock);
+                sellOrder.getOwner().completeSellOrder(tempStock);
+
+                //buyQueue.remove(buyOrder);
+                sellQueue.remove(sellOrder);
+                //buyQueue.put(new Stock(buyOrder.getShareCount() - sellOrder.getShareCount(),buyOrder.getStockName(),buyOrder.getPrice(),buyOrder.getOwner()));
+
+                //buyQueue.remove(buyOrder);
+//                       buyOrder.removeShares(sellOrder.getShareCount());
+                //buyQueue.put(buyOrder);
 
 
-                    } else {
+            } else if (buyOrder.getShareCount() < sellOrder.getShareCount()) {
+                Stock tempStock = new Stock(buyOrder.getShareCount(), sellOrder.getStockName(), sellOrder.getPrice(), sellOrder.getOwner());
+                buyOrder.getOwner().completeBuyOrder(tempStock);
+                sellOrder.getOwner().completeSellOrder(tempStock);
 
-                        buyOrder.getOwner().completeBuyOrder(sellOrder);
-                        sellOrder.getOwner().completeSellOrder(sellOrder);
+                buyQueue.remove(buyOrder);
+                //sellQueue.remove(sellOrder);
+                //sellQueue.put(new Stock(sellOrder.getShareCount() - buyOrder.getShareCount(),sellOrder.getStockName(),sellOrder.getPrice(),sellOrder.getOwner()));
+                //sellQueue.remove(sellOrder);
+//                       sellOrder.removeShares(sellOrder.getShareCount());
+                //sellQueue.put(sellOrder);
 
-                        buyQueue.remove(buyOrder);
-                        sellQueue.remove(sellOrder);
-                    }
-                    queueOwner.lastSale(sellOrder.getPrice());
-                    return true;
 
-                } else {
-                    return false;
-                }
+            } else {
+                Stock tempStock = new Stock(sellOrder.getShareCount(),sellOrder.getStockName(),sellOrder.getPrice(),sellOrder.getOwner());
+                buyOrder.getOwner().completeBuyOrder(tempStock);
+                sellOrder.getOwner().completeSellOrder(tempStock);
+
+
             }
+            queueOwner.lastSale(sellOrder.getPrice());
+            Market.orderCount();
         }
+
+        buyOrder.getOwner().unlockBuySellLock();
+        sellOrder.getOwner().unlockBuySellLock();
+
+
+        return true;
+
 
     }
 
@@ -105,8 +127,10 @@ public class OrderQueue {
 
         @Override
         public void run(){
-            OrderQueue temp = g1.deque();
-            temp.checkOrders();
+            while(true) {
+                OrderQueue temp = g1.deque();
+                temp.checkOrders();
+            }
         }
 
 

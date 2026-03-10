@@ -57,7 +57,7 @@ public class TradingBotMedium extends TradingBotBasic {
             if (buyOrders.size() > wealth * 100) {
                 buyStocks = false;
             }
-            if (sellOrders.size() < wealth * 10) {
+            if (sellOrders.size() < wealth * 50) {
                 sellStocks = true;
             }
         }
@@ -128,7 +128,7 @@ public class TradingBotMedium extends TradingBotBasic {
                     potentialBuy.add(new Stock(R.nextInt(0, 100) * wealth, picked.getName(), price, this));
                 }
             }
-            for (int i = 0; i < 7; i++) { // random pick
+            for (int i = 0; i < 30; i++) { // random pick
                 StockListing picked = Market.getListOfStocks().get(R.nextInt(0, Market.getListOfStocks().size()));
                 float price = picked.getLastSalePrice() * ((((float) picked.getHype() / 150) + 1) + (float) R.nextDouble(-.2, .2));
 
