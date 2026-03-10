@@ -6,7 +6,7 @@ public class GlobalClock {
     
 
     public Timer clock;
-    private static int day = 1;
+    private static int day = 29;
     private static int year = 2000;
     private static int month = 1;
     private int monthCounter = day;
@@ -26,25 +26,30 @@ public class GlobalClock {
             day++;
             monthCounter++;
             if(day > 365){
+                month = 1;
+                monthCounter = 1;
                 year++;
                 day = 1;
             }
-            if(monthCounter > 31 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12)){
+            if(monthCounter >= 31 && (month == 1 || month == 3 || month == 5 || month == 7 || month == 8 || month == 10 || month == 12)){
+                System.out.println("Month " + month);
                 month++;
                 monthCounter = 1;
                 Market.monthChanged(day);
-            }else if(monthCounter > 30 && (month == 4 || month == 6 || month == 9 || month == 11)){
+            }else if(monthCounter == 30 && (month == 4 || month == 6 || month == 9 || month == 11)){
+                System.out.println("Month " + month);
                 month ++;
                 monthCounter = 1;
                 Market.monthChanged(day);
-            }else if(monthCounter > 28 && month == 2){
+            }else if(monthCounter == 28 && month == 2){
+                System.out.println("Month " + month);
                 month++;
                 monthCounter = 1;
                 Market.monthChanged(day);
             }
             
             Market.dayChanged(day);
-            System.out.println("Day has changed");
+            System.out.println("Day " + day);
     }
 
     public static int getYear(){
