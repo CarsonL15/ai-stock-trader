@@ -7,10 +7,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import company.Company;
 import io.javalin.Javalin;
-import market.Market;
-import market.SetupMarket;
-import market.Stock;
-import market.StockListing;
+import market.*;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -89,6 +86,8 @@ public class APIClass {
          */
 
         app.get("/api/getMessages", ctx -> ctx.result(getMessages()));
+
+        app.get("/api/getDate", ctx -> ctx.result(getDate()));
 
         /**
          * POST these calls make orders on the market
@@ -174,6 +173,10 @@ public class APIClass {
             stockListings.add(new CompactJsonStockListing(s,false));
         }
         return g1.toJson(stockListings);
+    }
+
+    public static String getDate(){
+        return "Year: " + GlobalClock.getYear() + ", Month: " + GlobalClock.getMonth() + ", Day: " + GlobalClock.getDay();
     }
 
 

@@ -56,6 +56,10 @@ public class GlobalClock {
         return year;
     }
 
+    public static int getMonth(){
+        return month;
+    }
+
     public static int getDay(){
         return day;
     }
