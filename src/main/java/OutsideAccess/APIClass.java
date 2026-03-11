@@ -38,7 +38,13 @@ public class APIClass {
 
         SetupMarket.main(null);
 
-        var app = Javalin.create().start(8080);
+        var app = Javalin.create(config -> {
+            config.bundledPlugins.enableCors(cors -> {
+                cors.addRule(it -> {
+                    it.anyHost();
+                });
+            });
+        }).start(8080);
 
         app.get("/", ctx -> ctx.result("Server is running"));
 
