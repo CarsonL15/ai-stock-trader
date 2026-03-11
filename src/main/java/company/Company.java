@@ -564,9 +564,9 @@ public class Company{
 
 
         if(historicalYear == 0 && historicalQuarter == 0){
-            quarterlyFinances.add(new FinancialReport(assets,liabilities,revenue,expenses,netIncome,totalDebt,GlobalClock.getYear(),name,GlobalClock.getQuarter()));
+            quarterlyFinances.add(new FinancialReport(assets,liabilities,revenue,expenses,netIncome,GlobalClock.getYear(),name,GlobalClock.getQuarter()));
         }else{
-            quarterlyFinances.add(new FinancialReport(assets,liabilities,revenue,expenses,netIncome,totalDebt,historicalYear,name,historicalQuarter));
+            quarterlyFinances.add(new FinancialReport(assets,liabilities,revenue,expenses,netIncome,historicalYear,name,historicalQuarter));
         }
 
 
@@ -592,7 +592,6 @@ public class Company{
             assets += temp.getAssets();
             liabilities += temp.getLiabilities();
             netIncome += temp.getNetIncome();
-            totalDebt += temp.totalDebt();
             j--;
             if(j < 0){
                 break;
@@ -601,9 +600,9 @@ public class Company{
 
         }
         if(historicalYear == 0){
-            annualFinances.add(new FinancialReport(assets,liabilities,revenue,expenses,netIncome,totalDebt,GlobalClock.getYear(),name,0));
+            annualFinances.add(new FinancialReport(assets,liabilities,revenue,expenses,netIncome,GlobalClock.getYear(),name,0));
         }else{
-            annualFinances.add(new FinancialReport(assets,liabilities,revenue,expenses,netIncome,totalDebt,historicalYear,name,0));
+            annualFinances.add(new FinancialReport(assets,liabilities,revenue,expenses,netIncome,historicalYear,name,0));
         }
     }  
 
@@ -742,5 +741,9 @@ public class Company{
 
     public StockListing getStockListing(){
         return this.stock;
+    }
+
+    public String getName(){
+        return this.name;
     }
 }

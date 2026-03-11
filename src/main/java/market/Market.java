@@ -40,6 +40,7 @@ public class Market {
     private static Thread monthThread;
 
     private static long orderCount = 0;
+    private static long tryOrderCount = 0;
 
 
 
@@ -326,6 +327,10 @@ public class Market {
         return new ArrayList<>(stocks.values());
     }
 
+    public static ArrayList<Company> getListOfCompanies(){
+        return new ArrayList<>(companies.values());
+    }
+
     public static Company getCompany(String companyName){
         return companies.get(companyName);
     }
@@ -349,6 +354,10 @@ public class Market {
 
     public static void orderCount(){
         orderCount++;
+    }
+
+    public static void tryOrderCount(){
+        tryOrderCount++;
     }
 
     public static class OrderEnqueueThread implements Runnable{
@@ -421,8 +430,10 @@ public class Market {
 
         @Override
         public void run(){
-            System.out.println(orderCount + " Orders made today");
+            //System.out.println(orderCount + " Orders made today");
+            //System.out.println(tryOrderCount + " Orders Attempted today");
             orderCount = 0;
+            tryOrderCount = 0;
             for(Company c : companies.values()){
                 c.updateDay(day);
             }
@@ -434,16 +445,16 @@ public class Market {
         }
     }
 
-    protected static void loopUpdate(){
-        while(true){
-            try{
-                Thread.sleep(4000);
-                System.out.print("");
-            }catch (InterruptedException e){
-
-            }
-        }
-    }
+//    protected static void loopUpdate(){
+//        while(true){
+//            try{
+//                Thread.sleep(4000);
+//                System.out.print("");
+//            }catch (InterruptedException e){
+//
+//            }
+//        }
+//    }
     
 
 }

@@ -6,7 +6,7 @@ public class GlobalClock {
     
 
     public Timer clock;
-    private static int day = 29;
+    private static int day = 1;
     private static int year = 2000;
     private static int month = 1;
     private int monthCounter = day;
@@ -54,6 +54,10 @@ public class GlobalClock {
 
     public static int getYear(){
         return year;
+    }
+
+    public static int getMonth(){
+        return month;
     }
 
     public static int getDay(){
