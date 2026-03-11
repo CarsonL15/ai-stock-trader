@@ -1,1 +1,1 @@
-#ai-stock-trader readme
+#ai-stock-trader readme redeploy
