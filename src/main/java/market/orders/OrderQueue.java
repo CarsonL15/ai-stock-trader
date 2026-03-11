@@ -58,12 +58,16 @@ public class OrderQueue {
     }
 
     public synchronized boolean hasNextOrder(){
-        float price1 = (buyQueue.peek() != null) ? buyQueue.peek().getPrice():-1;
-        float price2 = (sellQueue.peek() != null) ? sellQueue.peek().getPrice():-1;
-        Market.tryOrderCount();
-        if(price1 != -1 && price2 != -1 && price1 >= price2){
-            return true;
-        }else{
+        try {
+            float price1 = (buyQueue.peek() != null) ? buyQueue.peek().getPrice() : -1;
+            float price2 = (sellQueue.peek() != null) ? sellQueue.peek().getPrice() : -1;
+            Market.tryOrderCount();
+            if (price1 != -1 && price2 != -1 && price1 >= price2) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (NullPointerException e){
             return false;
         }
 

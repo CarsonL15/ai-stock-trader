@@ -327,6 +327,10 @@ public class Market {
         return new ArrayList<>(stocks.values());
     }
 
+    public static ArrayList<Company> getListOfCompanies(){
+        return new ArrayList<>(companies.values());
+    }
+
     public static Company getCompany(String companyName){
         return companies.get(companyName);
     }
@@ -441,7 +445,7 @@ public class Market {
         }
     }
 
-    protected static void loopUpdate(){
+//    protected static void loopUpdate(){
 //        while(true){
 //            try{
 //                Thread.sleep(4000);
@@ -450,7 +454,7 @@ public class Market {
 //
 //            }
 //        }
-    }
+//    }
     
 
 }

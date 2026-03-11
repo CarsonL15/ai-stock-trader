@@ -17,12 +17,12 @@ public class CompactJsonCompany{
     private float fiveYearCompanyGrowth;
 
 
-    private ArrayList<FinancialReport> quarterlyFinances = new ArrayList<>();
+    //private ArrayList<FinancialReport> quarterlyFinances = new ArrayList<>();
     private ArrayList<FinancialReport> annualFinances = new ArrayList<>();
 
 
 
-        public CompactJsonCompany(Company c){
+        public CompactJsonCompany(Company c,boolean fullInfo){
             companyName = c.getName();
             stockName = c.getStockListing().getName();
             averageSixMonthCompanyGrowth = c.getAvgSixMonthCompanyGrowth();
@@ -30,8 +30,15 @@ public class CompactJsonCompany{
             oneYearCompanyGrowth = c.getOneYearCompanyGrowth();
             fiveYearCompanyGrowth = c.getFiveYearCompanyGrowth();
 
-            quarterlyFinances = c.getQuarterlyFinances();
-            annualFinances = c.getAnnualFinances();
+            //quarterlyFinances = c.getQuarterlyFinances();
+            if(fullInfo) {
+                annualFinances = c.getAnnualFinances();
+            }else{
+                int size = c.getAnnualFinances().size();
+                if(size > 1) {
+                    annualFinances = new ArrayList<>(c.getAnnualFinances().subList(Math.max(0, size - 10), size));
+                }
+            }
         }
 }
 

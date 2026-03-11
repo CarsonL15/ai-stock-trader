@@ -24,7 +24,7 @@ public class CompactJsonStockListing {
 //    private float cheapestSellOrder;
 //    private float mostExpensiveBuyOrder;
 
-    public CompactJsonStockListing(StockListing s){
+    public CompactJsonStockListing(StockListing s, boolean fullInfo){
         stockListingName = s.getName();
         associatedCompanyName = s.getCompany().getName();
         totalSharesInExistence = s.getTotalShares();
@@ -57,7 +57,14 @@ public class CompactJsonStockListing {
         sixMonthGrowth = s.getSixMonthGrowth();
         fiveYearGrowth = s.getFiveYearGrowth();
 
-        priceHistory = s.getPriceHistory();
+        if(fullInfo) {
+            priceHistory = s.getPriceHistory();
+        }else{
+            int size = s.getPriceHistory().size();
+            if(size > 1){
+                priceHistory = new ArrayList<>(s.getPriceHistory().subList(Math.max(0,size - 60),size));
+            }
+        }
         numOfSellOrder = s.getNumSellOrders();
         numOfBuyOrders = s.getNumBuyOrders();
 
