@@ -743,4 +743,8 @@ public class Company{
     public StockListing getStockListing(){
         return this.stock;
     }
+
+    public String getName(){
+        return this.name;
+    }
 }

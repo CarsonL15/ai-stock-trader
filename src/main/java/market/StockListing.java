@@ -11,10 +11,7 @@ import static java.lang.Float.NaN;
 public class StockListing{
 
     private final String name;
-    private float marketPrice;
-    private int sharesSold;
     private int totalShares;
-    private int authorizedShares;
     private int companyOwnedShares;
     private Company associatedCompany;
     private float currentPrice;
@@ -44,7 +41,6 @@ public class StockListing{
             this.name = name;
             int sharesUnsold = beginning_shares;
             this.totalShares = beginning_shares;
-            this.sharesSold = 0;
             this.associatedCompany = company;
 
             Random R = new Random();
@@ -303,6 +299,19 @@ public class StockListing{
 
     public float getLastSalePrice(){
         return currentPrice;
+    }
+
+    public ArrayList<Float> getPriceHistory(){
+        return this.priceHistory;
+    }
+
+    public int getNumSellOrders(){
+        return orders.getNumSellOrders();
+    }
+
+
+    public int getNumBuyOrders(){
+        return orders.getNumBuyOrders();
     }
 
     public Company getCompany(){

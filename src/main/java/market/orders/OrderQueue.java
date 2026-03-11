@@ -52,9 +52,21 @@ public class OrderQueue {
 //            System.out.println("");
 //        }
 
-        while (sellQueue.peek() != null && buyQueue.peek() != null && buyQueue.peek().getPrice() >= sellQueue.peek().getPrice()) {
+        while (hasNextOrder()) {
             acquire(sellQueue.peek(), buyQueue.peek());
         }
+    }
+
+    public synchronized boolean hasNextOrder(){
+        float price1 = (buyQueue.peek() != null) ? buyQueue.peek().getPrice():-1;
+        float price2 = (sellQueue.peek() != null) ? sellQueue.peek().getPrice():-1;
+        Market.tryOrderCount();
+        if(price1 != -1 && price2 != -1 && price1 >= price2){
+            return true;
+        }else{
+            return false;
+        }
+
     }
 
 
@@ -62,9 +74,16 @@ public class OrderQueue {
     @SuppressWarnings("DuplicatedCode")
     protected synchronized boolean acquire(Stock sellOrder, Stock buyOrder) {
 
-
-        buyOrder.getOwner().getBuySellLock();
-        sellOrder.getOwner().getBuySellLock();
+        if(buyOrder != null) {
+            buyOrder.getOwner().getBuySellLock();
+        }else{
+            return false;
+        }
+        if(sellOrder != null) {
+            sellOrder.getOwner().getBuySellLock();
+        }else{
+            return false;
+        }
 
 
 
@@ -115,6 +134,14 @@ public class OrderQueue {
         return true;
 
 
+    }
+
+    public int getNumSellOrders(){
+        return sellQueue.size();
+    }
+
+    public int getNumBuyOrders(){
+        return buyQueue.size();
     }
 
     public static class OrderQueueThread implements Runnable{

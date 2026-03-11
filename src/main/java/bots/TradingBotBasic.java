@@ -224,10 +224,10 @@ public abstract class TradingBotBasic {
 
 
                 for (TradingBotBasic b : botList) {
-                    if(R.nextInt(0,5) == num) {
+                    //if(R.nextInt(0,5) == num) {
                         b.evaluate();
                         i++;
-                    }
+                    //}
                     //System.out.println(Thread.currentThread().getName() + " finished " + i + " evals");
 
 
