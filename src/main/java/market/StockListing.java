@@ -6,13 +6,12 @@ import bots.TradingBotBasic;
 import company.Company;
 import market.orders.OrderQueue;
 
+import static java.lang.Float.NaN;
+
 public class StockListing{
 
     private final String name;
-    private float marketPrice;
-    private int sharesSold;
     private int totalShares;
-    private int authorizedShares;
     private int companyOwnedShares;
     private Company associatedCompany;
     private float currentPrice;
@@ -36,14 +35,12 @@ public class StockListing{
         logHistory();
         updateAvgGrowthValue();
         updateHype();
-
     }
 
     public StockListing(int beginning_shares, float IPO_value, String name,Company company){
             this.name = name;
             int sharesUnsold = beginning_shares;
             this.totalShares = beginning_shares;
-            this.sharesSold = 0;
             this.associatedCompany = company;
 
             Random R = new Random();
@@ -58,7 +55,7 @@ public class StockListing{
 
                 TradingBotBasic tempBot = Market.getBotList().get(botNum);
 
-                int stockAmount = (int) Math.pow(tempBot.getWealth(),associatedCompany.getSize()) * 5;
+                int stockAmount = (int)(5 * Math.pow(tempBot.getWealth(),1.5));
                 if(stockAmount > sharesUnsold){
                     stockAmount = sharesUnsold;
                 }
@@ -75,25 +72,36 @@ public class StockListing{
             }
             currentPrice = startingPrice;
             logHistory();
+            float growth = associatedCompany.getCompanyBalance();
             for(int i = 2;i <= 12 * (2000-company.getFoundingYear()); i++){
                 int priceCheck = R.nextInt(1,101);
 
-                if(priceCheck <= 5){
-                    currentPrice *= .75;
+
+
+                if(associatedCompany.getSize() == 1 && currentPrice > 10000){
+                    currentPrice *= R.nextFloat(.9f,1.1f);
+                }else if(associatedCompany.getSize() == 2 && currentPrice > 50000){
+                    currentPrice *= R.nextFloat(.9f,1.1f);
+                }else if(associatedCompany.getSize() == 3 && currentPrice > 75000){
+                    currentPrice *= R.nextFloat(.9f,1.1f);
+                }else if(associatedCompany.getSize() == 3 && currentPrice > 100000){
+                    currentPrice *= R.nextFloat(.9f,1.1f);
+                }else if(priceCheck <= 5){
+                    currentPrice *= .75f;
                 }else if(priceCheck <= 15){
-                    currentPrice *= .85;
+                    currentPrice *= .85f;
                 }else if(priceCheck <= 30){
-                    currentPrice *= .95;
+                    currentPrice *= .95f;
                 }else if(priceCheck <= 50){
                     // *= 1
                 }else if(priceCheck <= 70){
-                    currentPrice *= 1.05;
+                    currentPrice *= 1.05f;
                 }else if(priceCheck <= 85){
-                    currentPrice *= 1.15;
+                    currentPrice *= 1.15f;
                 }else if(priceCheck <= 95){
-                    currentPrice *= 1.25;
+                    currentPrice *= 1.25f;
                 }else{
-                    currentPrice *= 1.35;
+                    currentPrice *= 1.35f;
                 }
                 logHistory();
 
@@ -129,7 +137,7 @@ public class StockListing{
             }
         }
 
-        int randomHype = randForHype.nextInt(0,101);
+        int randomHype = randForHype.nextInt(1,101);
 
         if(randomHype == 1){
             hype -= 20;
@@ -245,7 +253,7 @@ public class StockListing{
     }
 
     public void updateQueue(){
-        orders.checkOrders();
+        orders.addOrderQueueToGlobal();
     }
 
     public String getName(){
@@ -253,11 +261,20 @@ public class StockListing{
     }
 
     public float getAvgSixMonthGrowth(){
-        return avgSixMonthG;
+        if(Float.isNaN(avgSixMonthG)) {
+            return 0;
+        }else{
+            return avgSixMonthG;
+        }
     }
 
     public float getAvgFiveYearGrowth(){
-        return avgFiveYearG;
+        if(Float.isNaN(avgFiveYearG)) {
+            return 0;
+        }else{
+            return avgFiveYearG;
+        }
+
     }
 
 
@@ -280,6 +297,19 @@ public class StockListing{
 
     public float getLastSalePrice(){
         return currentPrice;
+    }
+
+    public ArrayList<Float> getPriceHistory(){
+        return this.priceHistory;
+    }
+
+    public int getNumSellOrders(){
+        return orders.getNumSellOrders();
+    }
+
+
+    public int getNumBuyOrders(){
+        return orders.getNumBuyOrders();
     }
 
     public Company getCompany(){

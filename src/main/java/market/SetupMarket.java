@@ -1,4 +1,6 @@
 package market;
+import OutsideAccess.APIClass;
+import OutsideAccess.SpecialBot;
 import bots.TradingBotAggressive;
 import bots.TradingBotBasic;
 import bots.TradingBotMedium;
@@ -18,14 +20,13 @@ public class SetupMarket extends Market {
 
     public static void main(String[] args){
 
-
         HashMap<String,StockListing> stocks = new HashMap<>();
         HashMap<String, Company> companies = new HashMap<>();
         ArrayList<TradingBotBasic> bots = new ArrayList<>();
         Scanner companyNameScanner = null;
         Random R = new Random();
 
-        File f1 = new File("./CompanyNames.txt");
+        File f1 = new File("./company_names.txt");
         //System.out.println(f1.exists());
 
         try {
@@ -41,10 +42,14 @@ public class SetupMarket extends Market {
             bots.add(new TradingBotMedium());
         }
 
+        if(APIClass.getLLM() != null){
+            bots.add(APIClass.getLLM());
+        }
+
 
         setBots(bots);
 
-        for(int i = 0; i < 5000; i++){
+        for(int i = 0; i < 2000; i++){
             if(!companyNameScanner.hasNextLine()){
                 System.out.println("Warning less than 5000 company names detected, program may become unstable");
                 break;
@@ -55,6 +60,9 @@ public class SetupMarket extends Market {
             //stocks.put(tempCompany.getStockListing().getName(),tempCompany.getStockListing());
             addStock(tempCompany.getStockListing());
         }
+        companyNameScanner.close();
+
+        SpecialBot tempBot = APIClass.getLLM();
 
 
 
@@ -71,7 +79,7 @@ public class SetupMarket extends Market {
 
 
         System.out.println("done with setup");
-        loopUpdate();
+        //loopUpdate();
 
 
         

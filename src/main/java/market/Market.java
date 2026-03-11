@@ -31,13 +31,16 @@ public class Market {
     private static ArrayList<Company> largestCompanies = new ArrayList<>();
     private static ArrayList<StockListing> largestStocks = new ArrayList<>();
 
-    private static ArrayList<Thread> botThreadStorage;
+    private static HashMap<String,Thread> botThreadStorage;
     private static ArrayList<Thread> transactionHandlers;
     private static GlobalOrderQueue orderMarket;
     private static QueueForOrderUpdates orderStorage;
     private static Thread orderQueuer = new Thread(new OrderEnqueueThread(),"OrderQueuer");
     private static Thread dayThread;
     private static Thread monthThread;
+
+    private static long orderCount = 0;
+    private static long tryOrderCount = 0;
 
 
 
@@ -73,7 +76,7 @@ public class Market {
     }
 
     protected static void setupThreads(){
-        botThreadStorage = new ArrayList<>();
+        botThreadStorage = new HashMap<>();
         UpdateMonth.initialSetupForTop200();
         orderMarket = new GlobalOrderQueue();
         orderStorage = new QueueForOrderUpdates();
@@ -98,20 +101,24 @@ public class Market {
         orderStorage.enqueue(q);
     }
 
-
+    public static void finishedEval(String thread){
+        botThreadStorage.remove(thread);
+    }
 
     public static void dayChanged(int day){
         
         dayThread = new Thread(new UpdateDay(day),"DayThread");
         dayThread.start();
 
-        int section = bots.size() / 4;
-        botThreadStorage.clear();
+        if(botThreadStorage.isEmpty()) {
+            int section = bots.size() / 4;
+
 
             for (int i = 0; i < 4; i++) {
-                botThreadStorage.add(new Thread(new TradingBotBasic.BotThread(new ArrayList<>(bots.subList(section * i, (section * (i + 1)) - 1))),"BotThread-" + i));
-                botThreadStorage.get(i).start();
+                botThreadStorage.put("BotThread-" + i,new Thread(new TradingBotBasic.BotThread(new ArrayList<>(bots.subList(section * i, (section * (i + 1)) - 1)),i), "BotThread-" + i));
+                botThreadStorage.get("BotThread-" + i).start();
             }
+        }
 
 
 
@@ -119,6 +126,7 @@ public class Market {
 
     public static void monthChanged(int month){
         monthThread = new Thread(new UpdateMonth(),"MonthThread");
+        monthThread.start();
 
     }
 
@@ -224,7 +232,7 @@ public class Market {
         ArrayList<StatsCompareObject> top5000 = new ArrayList<>();
         for(Company c : companies.values()){
             if(!c.getQuarterlyFinances().isEmpty()) {
-                top5000.add(new StatsCompareObject(c.getCompanySize(), null, c));
+                top5000.add(new StatsCompareObject(c.getCompanyBalance(), null, c));
             }
         }
 
@@ -319,6 +327,10 @@ public class Market {
         return new ArrayList<>(stocks.values());
     }
 
+    public static ArrayList<Company> getListOfCompanies(){
+        return new ArrayList<>(companies.values());
+    }
+
     public static Company getCompany(String companyName){
         return companies.get(companyName);
     }
@@ -338,6 +350,14 @@ public class Market {
             GLOBAL_INCREMENTING_NAME = Integer.toString(temp);
         }
         return GLOBAL_INCREMENTING_NAME;
+    }
+
+    public static void orderCount(){
+        orderCount++;
+    }
+
+    public static void tryOrderCount(){
+        tryOrderCount++;
     }
 
     public static class OrderEnqueueThread implements Runnable{
@@ -361,6 +381,8 @@ public class Market {
             for(StockListing s : stocks.values()){
                 s.monthUpdated();
             }
+
+
 
             bestStockFastGrowth = calculateStockSixMonthGrowth();
             bestStockSlowGrowth = calculateStockFiveYearGrowth();
@@ -408,22 +430,31 @@ public class Market {
 
         @Override
         public void run(){
+            //System.out.println(orderCount + " Orders made today");
+            //System.out.println(tryOrderCount + " Orders Attempted today");
+            orderCount = 0;
+            tryOrderCount = 0;
             for(Company c : companies.values()){
                 c.updateDay(day);
             }
+//            if(day % 5 == 0) { // every 5 days make a pass through the orders
+//                for (StockListing s : stocks.values()) {
+//                    s.updateQueue();
+//                }
+//            }
         }
     }
 
-    protected static void loopUpdate(){
-        while(true){
-            try{
-                Thread.sleep(4000);
-                System.out.print("");
-            }catch (InterruptedException e){
-
-            }
-        }
-    }
+//    protected static void loopUpdate(){
+//        while(true){
+//            try{
+//                Thread.sleep(4000);
+//                System.out.print("");
+//            }catch (InterruptedException e){
+//
+//            }
+//        }
+//    }
     
 
 }
