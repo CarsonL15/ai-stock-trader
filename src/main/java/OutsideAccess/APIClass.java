@@ -4,6 +4,7 @@ import OutsideAccess.CompactJsonObjects.CompactJsonCompany;
 import OutsideAccess.CompactJsonObjects.CompactJsonStockListing;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import io.javalin.Javalin;
 import market.Market;
 import market.SetupMarket;
 import market.Stock;
@@ -27,21 +28,19 @@ public class APIClass {
     public static void main(String[] args){
 
         SetupMarket.main(null);
-//        var app = Javalin.create().start(7000);
-//
-//        app.get("/", ctx -> ctx.result("Test"));
-//
-//        app.get("/api/test", ctx -> ctx.result("Api working"));
 
-//        app.post("/api/test",ctx -> {
-//            String temp = ctx.body();
-//            System.out.println("test");
-//            ctx.result("Response" + temp);
-//        });
-        String tempCompany = getCompanyFinancials("Onyx Enterprises");
-        String tempStockListing = getStockListingInformation(Market.getCompany("Onyx Enterprises").getStockListing().getName());
+        var app = Javalin.create().start(8080);
 
-        System.out.println("Done with api setup");
+        app.get("/", ctx -> ctx.result("Server is running!"));
+
+        app.get("/api/test", ctx -> ctx.result("GET works!"));
+
+        app.post("/api/test", ctx -> {
+            String body = ctx.body();
+            ctx.result("You sent: " + body);
+        });
+
+        System.out.println("Done with api setup - server running on port 8080");
     }
 
     // these functions retrieve
