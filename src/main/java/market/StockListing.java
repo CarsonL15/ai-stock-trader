@@ -76,9 +76,7 @@ public class StockListing{
             for(int i = 2;i <= 12 * (2000-company.getFoundingYear()); i++){
                 int priceCheck = R.nextInt(1,101);
 
-                if(currentPrice > Math.pow(100,associatedCompany.getSize())){
 
-                }
 
                 if(associatedCompany.getSize() == 1 && currentPrice > 10000){
                     currentPrice *= R.nextFloat(.9f,1.1f);

@@ -40,9 +40,9 @@ public class APIClass {
 
         var app = Javalin.create().start(8080);
 
-        app.get("/", ctx -> ctx.result("Server is running!"));
+        app.get("/", ctx -> ctx.result("Server is running"));
 
-        app.get("/api/test", ctx -> ctx.result("GET works!"));
+        app.get("/api/test", ctx -> ctx.result("GET works"));
 
         /**
          * GET requests for market info

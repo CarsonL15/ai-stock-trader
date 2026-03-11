@@ -36,10 +36,10 @@ public class SetupMarket extends Market {
             System.exit(0);
         }
 
-        for(int i = 0; i < 15000; i++){
+        for(int i = 0; i < 5000; i++){
             bots.add(new TradingBotPassive());
-            //bots.add(new TradingBotAggressive());
-            //bots.add(new TradingBotMedium());
+            bots.add(new TradingBotAggressive());
+            bots.add(new TradingBotMedium());
         }
 
         if(APIClass.getLLM() != null){
