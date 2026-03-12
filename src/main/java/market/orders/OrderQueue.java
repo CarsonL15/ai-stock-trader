@@ -140,6 +140,16 @@ public class OrderQueue {
 
     }
 
+    public float getCheapestSellPrice(){
+        Stock cheapest = sellQueue.peek();
+        return cheapest != null ? cheapest.getPrice() : -1;
+    }
+
+    public float getHighestBuyPrice(){
+        Stock highest = buyQueue.peek();
+        return highest != null ? highest.getPrice() : -1;
+    }
+
     public int getNumSellOrders(){
         return sellQueue.size();
     }

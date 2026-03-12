@@ -4,6 +4,7 @@ import OutsideAccess.CompactJsonObjects.CompactJsonStock;
 import bots.TradingBotBasic;
 import market.Market;
 import market.Stock;
+import market.StockListing;
 
 import java.util.HashMap;
 
@@ -116,6 +117,63 @@ public class SpecialBot extends TradingBotBasic {
         }
         unlockBuySellLock();
         return returnMessage;
+    }
+
+    public synchronized String placeMarketBuyOrder(String stockName, int shares){
+        getBuySellLock();
+        StockListing listing = Market.getStockListing(stockName);
+        if(listing == null){
+            unlockBuySellLock();
+            return "FAILURE: Stock " + stockName + " not found";
+        }
+        if(shares <= 0){
+            unlockBuySellLock();
+            return "FAILURE: Invalid share count";
+        }
+        float sellPrice = listing.getCheapestSellPrice();
+        if(sellPrice <= 0){
+            unlockBuySellLock();
+            return "FAILURE: No sell orders available for " + stockName;
+        }
+        float totalCost = sellPrice * shares;
+        if(cash < totalCost){
+            unlockBuySellLock();
+            return "FAILURE: Insufficient cash (need $" + totalCost + ", have $" + cash + ")";
+        }
+        Stock s = new Stock(shares, stockName, sellPrice, this);
+        listBuyOrder(s);
+        unlockBuySellLock();
+        return "SUCCESS: Market buy " + shares + " " + stockName + " at $" + sellPrice + "/share (total: $" + totalCost + ")";
+    }
+
+    public synchronized String placeMarketSellOrder(String stockName, int shares){
+        getBuySellLock();
+        if(!stockHeld.containsKey(stockName)){
+            unlockBuySellLock();
+            return "FAILURE: " + stockName + " not in portfolio";
+        }
+        if(shares <= 0){
+            unlockBuySellLock();
+            return "FAILURE: Invalid share count";
+        }
+        if(shares > stockHeld.get(stockName).getShareCount()){
+            unlockBuySellLock();
+            return "FAILURE: Not enough shares (own " + stockHeld.get(stockName).getShareCount() + ")";
+        }
+        StockListing listing = Market.getStockListing(stockName);
+        if(listing == null){
+            unlockBuySellLock();
+            return "FAILURE: Stock not found";
+        }
+        float buyPrice = listing.getHighestBuyPrice();
+        if(buyPrice <= 0){
+            unlockBuySellLock();
+            return "FAILURE: No buy orders available for " + stockName;
+        }
+        Stock s = new Stock(shares, stockName, buyPrice, this);
+        listSellOrder(s, false);
+        unlockBuySellLock();
+        return "SUCCESS: Market sell " + shares + " " + stockName + " at $" + buyPrice + "/share (total: $" + (buyPrice * shares) + ")";
     }
 
     @Override

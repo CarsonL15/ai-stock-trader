@@ -105,6 +105,16 @@ public class APIClass {
             ctx.result(placeSellOrder(order));
         });
 
+        app.post("/api/placeMarketBuyOrder", ctx -> {
+            String order = ctx.body();
+            ctx.result(placeMarketBuyOrder(order));
+        });
+
+        app.post("/api/placeMarketSellOrder", ctx -> {
+            String order = ctx.body();
+            ctx.result(placeMarketSellOrder(order));
+        });
+
         app.post("/api/removeBuyOrder", ctx -> {
             String name = ctx.body();
 
@@ -215,6 +225,16 @@ public class APIClass {
     }
 
     // these functions place or unlist orders
+
+    public static String placeMarketBuyOrder(String order){
+        CompactJsonStock buyOrder = g1.fromJson(order,orderStock);
+        return LLM.placeMarketBuyOrder(buyOrder.getName(), buyOrder.getShares());
+    }
+
+    public static String placeMarketSellOrder(String order){
+        CompactJsonStock sellOrder = g1.fromJson(order,orderStock);
+        return LLM.placeMarketSellOrder(sellOrder.getName(), sellOrder.getShares());
+    }
 
     public static String placeBuyOrder(String order){
         CompactJsonStock buyOrder = g1.fromJson(order,orderStock);

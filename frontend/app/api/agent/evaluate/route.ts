@@ -50,7 +50,7 @@ const tools: Tool[] = [
       {
         name: "buyStock",
         description:
-          "Place a buy order for a stock. The order only fills if there is a sell order at or below your price. Set price 5-10% ABOVE market price to ensure it fills. Only buy stocks with sellOrders > 0.",
+          "Place a market buy order for a stock. Automatically buys at the best available sell price. Only works if there are active sell orders for the stock. No need to specify a price.",
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -62,19 +62,14 @@ const tools: Tool[] = [
               type: Type.NUMBER,
               description: "Number of shares to buy",
             },
-            price: {
-              type: Type.NUMBER,
-              description:
-                "Price per share you are willing to pay. Set 5-10% ABOVE market price to ensure fill.",
-            },
           },
-          required: ["name", "shares", "price"],
+          required: ["name", "shares"],
         },
       },
       {
         name: "sellStock",
         description:
-          "Place a sell order for a stock you currently hold. The order only fills if there is a buy order at or above your price. Set price 5-10% BELOW market price to ensure it fills.",
+          "Place a market sell order for a stock you currently hold. Automatically sells at the best available buy price. Only works if there are active buy orders for the stock. No need to specify a price.",
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -86,13 +81,8 @@ const tools: Tool[] = [
               type: Type.NUMBER,
               description: "Number of shares to sell",
             },
-            price: {
-              type: Type.NUMBER,
-              description:
-                "Price per share you want to sell at. Set 5-10% BELOW market price to ensure fill.",
-            },
           },
-          required: ["name", "shares", "price"],
+          required: ["name", "shares"],
         },
       },
     ],
@@ -209,12 +199,11 @@ async function getPortfolio(): Promise<string> {
 
 async function buyStock(
   name: string,
-  shares: number,
-  price: number
+  shares: number
 ): Promise<string> {
-  const res = await fetch(`${JAVA_API_URL}/api/placeBuyOrder`, {
+  const res = await fetch(`${JAVA_API_URL}/api/placeMarketBuyOrder`, {
     method: "POST",
-    body: JSON.stringify({ name, shares, price }),
+    body: JSON.stringify({ name, shares, price: 0 }),
     headers: { "Content-Type": "application/json" },
   });
   return await res.text();
@@ -222,12 +211,11 @@ async function buyStock(
 
 async function sellStock(
   name: string,
-  shares: number,
-  price: number
+  shares: number
 ): Promise<string> {
-  const res = await fetch(`${JAVA_API_URL}/api/placeSellOrder`, {
+  const res = await fetch(`${JAVA_API_URL}/api/placeMarketSellOrder`, {
     method: "POST",
-    body: JSON.stringify({ name, shares, price }),
+    body: JSON.stringify({ name, shares, price: 0 }),
     headers: { "Content-Type": "application/json" },
   });
   return await res.text();
@@ -238,26 +226,26 @@ const toolFunctions: Record<string, (args: any) => Promise<string>> = {
   getMarketOverview: () => getMarketOverview(),
   getStockDetail: (args) => getStockDetail(args.name),
   getPortfolio: () => getPortfolio(),
-  buyStock: (args) => buyStock(args.name, args.shares, args.price),
-  sellStock: (args) => sellStock(args.name, args.shares, args.price),
+  buyStock: (args) => buyStock(args.name, args.shares),
+  sellStock: (args) => sellStock(args.name, args.shares),
 };
 
 const SYSTEM_PROMPT = `You are an AI stock trading agent managing a portfolio in a simulated stock market.
 
 Your goal is to grow your portfolio value over time by making smart trades. You are competing against 15,000 simple algorithmic bots (passive, medium, and aggressive strategies).
 
-CRITICAL — How orders work in this market:
-- This is a limit order book. Buy/sell orders only fill when matched with a counterparty.
-- A buy order fills ONLY when there is a sell order at or below your buy price.
-- A sell order fills ONLY when there is a buy order at or above your sell price.
-- Orders that don't match sit unfilled forever. You MUST price orders to match.
+How orders work:
+- Buy and sell orders are MARKET ORDERS — they execute at the best available price automatically.
+- A buy order fills at the cheapest available sell price. It requires active sell orders (sellOrders > 0).
+- A sell order fills at the highest available buy price. It requires active buy orders (buyOrders > 0).
+- You do NOT specify a price — just the stock name and number of shares.
+- If there are no counterparty orders, the trade will fail. Always check sellOrders/buyOrders counts.
 
 Strategy guidelines:
 - Start each evaluation by checking your portfolio, then scan the market overview
-- ONLY buy stocks that have active sell orders (sellOrders > 0) — otherwise your order will never fill
-- When BUYING, set your price 5-10% ABOVE the listed market price to ensure your order matches with existing sell orders
-- When SELLING, set your price 5-10% BELOW the listed market price to ensure your order matches with existing buy orders
-- Prefer stocks from the "mostActive" list — these have the most liquidity and your orders are most likely to fill
+- ONLY buy stocks that have active sell orders (sellOrders > 0)
+- ONLY sell stocks that have active buy orders (buyOrders > 0)
+- Prefer stocks from the "mostActive" list — these have the most liquidity
 - Look for stocks with high positive hype AND strong 5-year growth — these have momentum
 - Diversify across multiple stocks, don't put everything in one
 - Keep some cash reserve (at least 10-20%) for opportunities
@@ -320,11 +308,11 @@ export async function POST() {
           // Track buy/sell actions for the activity log (include backend response)
           if (fnName === "buyStock") {
             actions.push(
-              `BUY ${args.shares} ${args.name} @ $${args.price} → ${toolResponse}`
+              `BUY ${args.shares} ${args.name} → ${toolResponse}`
             );
           } else if (fnName === "sellStock") {
             actions.push(
-              `SELL ${args.shares} ${args.name} @ $${args.price} → ${toolResponse}`
+              `SELL ${args.shares} ${args.name} → ${toolResponse}`
             );
           }
 
