@@ -11,6 +11,8 @@ public class CompactJsonCompany{
 
     private String companyName;
     private String stockName;
+    private int size;
+    private int foundingYear;
     private float averageSixMonthCompanyGrowth;
     private float averageFiveYearCompanyGrowth;
     private float oneYearCompanyGrowth;
@@ -25,6 +27,8 @@ public class CompactJsonCompany{
         public CompactJsonCompany(Company c,boolean fullInfo){
             companyName = c.getName();
             stockName = c.getStockListing().getName();
+            size = c.getSize();
+            foundingYear = c.getFoundingYear();
             averageSixMonthCompanyGrowth = c.getAvgSixMonthCompanyGrowth();
             averageFiveYearCompanyGrowth = c.getAvgFiveYearCompanyGrowth();
             oneYearCompanyGrowth = c.getOneYearCompanyGrowth();
