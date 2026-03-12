@@ -16,6 +16,10 @@ public class SpecialBot extends TradingBotBasic {
         wealth = 15;
     }
 
+    public void clearInitialHoldings(){
+        stockHeld.clear();
+    }
+
     public synchronized double getCash(){
         return this.cash;
     }

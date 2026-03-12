@@ -34,6 +34,7 @@ public class APIClass {
     public static void main(String[] args){
 
         SetupMarket.main(null);
+        LLM.clearInitialHoldings();
 
         var app = Javalin.create(config -> {
             config.bundledPlugins.enableCors(cors -> {
