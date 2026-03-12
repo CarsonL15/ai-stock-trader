@@ -99,9 +99,6 @@ export default function Dashboard() {
 
         {/* Right: Charts + Agent */}
         <div className="flex-1 flex flex-col overflow-y-auto p-4 gap-4">
-          {/* Portfolio Value Chart */}
-          <PortfolioChart activities={activities} />
-
           {/* Price Chart */}
           {selectedStock ? (
             <PriceChart stock={selectedStock} />
@@ -112,6 +109,9 @@ export default function Dashboard() {
               </p>
             </div>
           )}
+
+          {/* Portfolio Value Chart */}
+          <PortfolioChart activities={activities} />
 
           {/* Agent Panel */}
           {portfolio && (

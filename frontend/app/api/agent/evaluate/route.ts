@@ -304,14 +304,14 @@ export async function POST() {
 
           const toolResponse = await toolFunctions[fnName](args);
 
-          // Track buy/sell actions for the activity log
+          // Track buy/sell actions for the activity log (include backend response)
           if (fnName === "buyStock") {
             actions.push(
-              `BUY ${args.shares} ${args.name} @ $${args.price}`
+              `BUY ${args.shares} ${args.name} @ $${args.price} → ${toolResponse}`
             );
           } else if (fnName === "sellStock") {
             actions.push(
-              `SELL ${args.shares} ${args.name} @ $${args.price}`
+              `SELL ${args.shares} ${args.name} @ $${args.price} → ${toolResponse}`
             );
           }
 
