@@ -50,7 +50,7 @@ const tools: Tool[] = [
       {
         name: "buyStock",
         description:
-          "Place a buy order for a stock. The order is placed on the market at the specified price. It will be filled when a seller matches.",
+          "Place a buy order for a stock. The order only fills if there is a sell order at or below your price. Set price 5-10% ABOVE market price to ensure it fills. Only buy stocks with sellOrders > 0.",
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -65,7 +65,7 @@ const tools: Tool[] = [
             price: {
               type: Type.NUMBER,
               description:
-                "Price per share you are willing to pay. Should be near the current market price.",
+                "Price per share you are willing to pay. Set 5-10% ABOVE market price to ensure fill.",
             },
           },
           required: ["name", "shares", "price"],
@@ -74,7 +74,7 @@ const tools: Tool[] = [
       {
         name: "sellStock",
         description:
-          "Place a sell order for a stock you currently hold. The order is placed on the market at the specified price. It will be filled when a buyer matches.",
+          "Place a sell order for a stock you currently hold. The order only fills if there is a buy order at or above your price. Set price 5-10% BELOW market price to ensure it fills.",
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -89,7 +89,7 @@ const tools: Tool[] = [
             price: {
               type: Type.NUMBER,
               description:
-                "Price per share you want to sell at. Should be near the current market price.",
+                "Price per share you want to sell at. Set 5-10% BELOW market price to ensure fill.",
             },
           },
           required: ["name", "shares", "price"],
@@ -120,27 +120,32 @@ async function getMarketOverview(): Promise<string> {
       symbol: l.stockListingName,
       price: l.lastSalePrice,
       hype: l.hypeNumeric,
-      sixMonthGrowth: l.sixMonthGrowth,
       fiveYearGrowth: l.fiveYearGrowth,
+      sellOrders: l.numOfSellOrder,
+      buyOrders: l.numOfBuyOrders,
       company: l.associatedCompanyName,
     }));
 
-  // Sort by absolute hype and growth to surface interesting stocks
-  const topByHype = [...summary].sort((a: any, b: any) => b.hype - a.hype).slice(0, 20);
-  const bottomByHype = [...summary].sort((a: any, b: any) => a.hype - b.hype).slice(0, 10);
-  const topGrowth = [...summary]
-    .sort((a: any, b: any) => (b.sixMonthGrowth ?? 0) - (a.sixMonthGrowth ?? 0))
+  // Only consider stocks that have active sell orders (these can actually be bought)
+  const tradeable = summary.filter((s: any) => s.sellOrders > 0);
+
+  // Sort by hype and growth to surface interesting stocks
+  const topByHype = [...tradeable].sort((a: any, b: any) => b.hype - a.hype).slice(0, 20);
+  const bottomByHype = [...tradeable].sort((a: any, b: any) => a.hype - b.hype).slice(0, 10);
+  const topGrowth = [...tradeable]
+    .sort((a: any, b: any) => (b.fiveYearGrowth ?? 0) - (a.fiveYearGrowth ?? 0))
     .slice(0, 20);
-  const worstGrowth = [...summary]
-    .sort((a: any, b: any) => (a.sixMonthGrowth ?? 0) - (b.sixMonthGrowth ?? 0))
-    .slice(0, 10);
+  const mostActive = [...summary]
+    .sort((a: any, b: any) => (b.sellOrders + b.buyOrders) - (a.sellOrders + a.buyOrders))
+    .slice(0, 20);
 
   return JSON.stringify({
     totalStocks: summary.length,
+    tradeableStocks: tradeable.length,
     topHype: topByHype,
     lowestHype: bottomByHype,
     topGrowth: topGrowth,
-    worstGrowth: worstGrowth,
+    mostActive: mostActive,
   });
 }
 
@@ -241,13 +246,21 @@ const SYSTEM_PROMPT = `You are an AI stock trading agent managing a portfolio in
 
 Your goal is to grow your portfolio value over time by making smart trades. You are competing against 15,000 simple algorithmic bots (passive, medium, and aggressive strategies).
 
+CRITICAL — How orders work in this market:
+- This is a limit order book. Buy/sell orders only fill when matched with a counterparty.
+- A buy order fills ONLY when there is a sell order at or below your buy price.
+- A sell order fills ONLY when there is a buy order at or above your sell price.
+- Orders that don't match sit unfilled forever. You MUST price orders to match.
+
 Strategy guidelines:
 - Start each evaluation by checking your portfolio, then scan the market overview
-- Look for stocks with high positive hype AND strong growth — these have momentum
-- Look for undervalued stocks with low hype but solid financials — these are value plays
+- ONLY buy stocks that have active sell orders (sellOrders > 0) — otherwise your order will never fill
+- When BUYING, set your price 5-10% ABOVE the listed market price to ensure your order matches with existing sell orders
+- When SELLING, set your price 5-10% BELOW the listed market price to ensure your order matches with existing buy orders
+- Prefer stocks from the "mostActive" list — these have the most liquidity and your orders are most likely to fill
+- Look for stocks with high positive hype AND strong 5-year growth — these have momentum
 - Diversify across multiple stocks, don't put everything in one
 - Keep some cash reserve (at least 10-20%) for opportunities
-- When selling, set prices slightly above market price; when buying, set prices at or slightly below market price
 - Use getStockDetail to dig into financials before making large trades
 - Don't overtrade — only act when you see a clear opportunity
 - Consider the company's size, founding year, revenue trends, and debt levels

@@ -92,7 +92,13 @@ export default function StockTable({
 
       {/* Table header */}
       <div className="shrink-0">
-        <table className="w-full">
+        <table className="w-full table-fixed">
+          <colgroup>
+            <col className="w-[35%]" />
+            <col className="w-[25%]" />
+            <col className="w-[20%]" />
+            <col className="w-[20%]" />
+          </colgroup>
           <thead>
             <tr className="border-b border-gray-800">
               <th className={headerClass} onClick={() => handleSort("symbol")}>
@@ -114,7 +120,13 @@ export default function StockTable({
 
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
+          <colgroup>
+            <col className="w-[35%]" />
+            <col className="w-[25%]" />
+            <col className="w-[20%]" />
+            <col className="w-[20%]" />
+          </colgroup>
           <tbody>
             {sorted.map((stock) => (
               <tr
@@ -127,14 +139,14 @@ export default function StockTable({
                 }`}
               >
                 <td className="px-3 py-2">
-                  <div className="font-mono font-bold text-white text-sm">
+                  <div className="font-mono font-bold text-white text-sm truncate">
                     {stock.symbol}
                   </div>
-                  <div className="text-xs text-gray-500 truncate max-w-[120px]">
+                  <div className="text-xs text-gray-500 truncate">
                     {stock.company.name}
                   </div>
                 </td>
-                <td className="px-3 py-2 font-mono text-sm">
+                <td className="px-3 py-2 font-mono text-sm truncate">
                   ${stock.price.toFixed(2)}
                 </td>
                 <td className={`px-3 py-2 font-mono text-sm ${hypeColor(stock.hype)}`}>
