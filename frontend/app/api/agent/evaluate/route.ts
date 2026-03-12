@@ -1,55 +1,367 @@
 import { NextResponse } from "next/server";
+import { GoogleGenAI, Type, FunctionCallingConfigMode, Tool } from "@google/genai";
 import { AgentActivity } from "@/lib/types";
 
-// Mock agent evaluation endpoint.
-// When the Java backend + Claude API are integrated, this will:
-// 1. Fetch market data from the Java backend
-// 2. Call Claude with tool_use to analyze and trade
-// 3. Return the agent's reasoning and action
+const JAVA_API_URL = process.env.NEXT_PUBLIC_JAVA_API_URL || "";
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
-const symbols = ["NXTS", "ALPD", "SLRE", "CRPH", "IRCI", "VTXM"];
+// Tool definitions
 
-const reasonings = [
-  "NXTS showing strong upward momentum over the past 6 months with consistent revenue growth. Hype score is favorable. Entering a position.",
-  "CRPH has declining hype and weakening quarterly financials. Reducing exposure to limit downside risk.",
-  "Market conditions are uncertain. Multiple stocks showing mixed signals. Holding current positions and waiting for clearer trends.",
-  "SLRE is undervalued relative to its fundamentals. Revenue growing faster than expenses, and the 5-year growth trajectory is strong. Accumulating shares.",
-  "ALPD has reached my target price. Taking profits on half the position to lock in gains while maintaining some upside exposure.",
-  "IRCI showing early signs of a turnaround. Quarterly revenue improved and hype is recovering from lows. Small speculative buy.",
-  "VTXM is a small-cap with high volatility but the company financials are solid for its size. Adding a small position for diversification.",
-  "Portfolio is overweight in tech stocks. Selling some NXTS to rebalance into IRCI for sector diversification.",
+const tools: Tool[] = [
+  {
+    functionDeclarations: [
+      {
+        name: "getMarketOverview",
+        description:
+          "Get a summary of all stocks on the market including their symbol, price, hype (-100 to 100), 6-month growth %, and company name. Use this to scan the market for opportunities.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            unused: { type: Type.STRING, description: "Not used, pass any value" },
+          },
+        },
+      },
+      {
+        name: "getStockDetail",
+        description:
+          "Get detailed info on a specific stock including full price history, company financials (revenue, expenses, net income, assets, liabilities), company size, and founding year. Use this to do deep analysis before buying or selling.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            name: {
+              type: Type.STRING,
+              description: "The stock listing name (symbol)",
+            },
+          },
+          required: ["name"],
+        },
+      },
+      {
+        name: "getPortfolio",
+        description:
+          "Get the current portfolio including cash balance and all stock holdings with share counts and prices.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            unused: { type: Type.STRING, description: "Not used, pass any value" },
+          },
+        },
+      },
+      {
+        name: "buyStock",
+        description:
+          "Place a buy order for a stock. The order is placed on the market at the specified price. It will be filled when a seller matches.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            name: {
+              type: Type.STRING,
+              description: "The stock listing name (symbol) to buy",
+            },
+            shares: {
+              type: Type.NUMBER,
+              description: "Number of shares to buy",
+            },
+            price: {
+              type: Type.NUMBER,
+              description:
+                "Price per share you are willing to pay. Should be near the current market price.",
+            },
+          },
+          required: ["name", "shares", "price"],
+        },
+      },
+      {
+        name: "sellStock",
+        description:
+          "Place a sell order for a stock you currently hold. The order is placed on the market at the specified price. It will be filled when a buyer matches.",
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            name: {
+              type: Type.STRING,
+              description: "The stock listing name (symbol) to sell",
+            },
+            shares: {
+              type: Type.NUMBER,
+              description: "Number of shares to sell",
+            },
+            price: {
+              type: Type.NUMBER,
+              description:
+                "Price per share you want to sell at. Should be near the current market price.",
+            },
+          },
+          required: ["name", "shares", "price"],
+        },
+      },
+    ],
+  },
 ];
 
-let evalCounter = 0;
+// Tool implementations — call the Java backend directly (server-to-server, no CORS issues)
 
-export async function POST() {
-  const idx = evalCounter % reasonings.length;
-  evalCounter++;
+async function getMarketOverview(): Promise<string> {
+  const [listingsRes, companiesRes] = await Promise.all([
+    fetch(`${JAVA_API_URL}/api/getAllStockListingInfo`),
+    fetch(`${JAVA_API_URL}/api/getAllCompanyInfo`),
+  ]);
+  const listings = await listingsRes.json();
+  const companies = await companiesRes.json();
 
-  const reasoning = reasonings[idx];
-  const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-  const shares = Math.floor(Math.random() * 80) + 10;
-  const price = parseFloat((Math.random() * 60 + 3).toFixed(2));
-
-  let action: string;
-  if (reasoning.includes("Holding") || reasoning.includes("uncertain")) {
-    action = "HOLD — no action taken";
-  } else if (
-    reasoning.includes("Reducing") ||
-    reasoning.includes("Taking profits") ||
-    reasoning.includes("Selling")
-  ) {
-    action = `SELL ${shares} ${symbol} @ $${price}`;
-  } else {
-    action = `BUY ${shares} ${symbol} @ $${price}`;
+  const companyMap = new Map<string, any>();
+  for (const c of companies) {
+    companyMap.set(c.companyName, c);
   }
 
-  const activity: AgentActivity = {
-    id: `eval-${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    reasoning,
-    action,
-  };
+  // Return a condensed summary — sending all 2000 stocks would use too many tokens
+  const summary = listings
+    .map((l: any) => ({
+      symbol: l.stockListingName,
+      price: l.lastSalePrice,
+      hype: l.hypeNumeric,
+      sixMonthGrowth: l.sixMonthGrowth,
+      fiveYearGrowth: l.fiveYearGrowth,
+      company: l.associatedCompanyName,
+    }));
 
-  return NextResponse.json(activity);
+  // Sort by absolute hype and growth to surface interesting stocks
+  const topByHype = [...summary].sort((a: any, b: any) => b.hype - a.hype).slice(0, 20);
+  const bottomByHype = [...summary].sort((a: any, b: any) => a.hype - b.hype).slice(0, 10);
+  const topGrowth = [...summary]
+    .sort((a: any, b: any) => (b.sixMonthGrowth ?? 0) - (a.sixMonthGrowth ?? 0))
+    .slice(0, 20);
+  const worstGrowth = [...summary]
+    .sort((a: any, b: any) => (a.sixMonthGrowth ?? 0) - (b.sixMonthGrowth ?? 0))
+    .slice(0, 10);
+
+  return JSON.stringify({
+    totalStocks: summary.length,
+    topHype: topByHype,
+    lowestHype: bottomByHype,
+    topGrowth: topGrowth,
+    worstGrowth: worstGrowth,
+  });
+}
+
+async function getStockDetail(name: string): Promise<string> {
+  const [listingRes, companyRes] = await Promise.all([
+    fetch(`${JAVA_API_URL}/api/getAllStockListingInfo`),
+    fetch(`${JAVA_API_URL}/api/getAllCompanyInfo`),
+  ]);
+  const listings = await listingRes.json();
+  const companies = await companyRes.json();
+
+  const listing = listings.find(
+    (l: any) => l.stockListingName === name
+  );
+  const company = companies.find(
+    (c: any) => c.stockName === name || c.companyName === listing?.associatedCompanyName
+  );
+
+  if (!listing) return JSON.stringify({ error: `Stock ${name} not found` });
+
+  return JSON.stringify({
+    symbol: listing.stockListingName,
+    price: listing.lastSalePrice,
+    hype: listing.hypeNumeric,
+    hypeDescription: listing.hype,
+    totalShares: listing.totalSharesInExistence,
+    sixMonthGrowth: listing.sixMonthGrowth,
+    fiveYearGrowth: listing.fiveYearGrowth,
+    avgSixMonthGrowth: listing.avgSixMonthGrowth,
+    avgFiveYearGrowth: listing.avgFiveYearGrowth,
+    recentPriceHistory: listing.priceHistory.slice(-12),
+    numSellOrders: listing.numOfSellOrder,
+    numBuyOrders: listing.numOfBuyOrders,
+    company: company
+      ? {
+          name: company.companyName,
+          size: company.size,
+          foundingYear: company.foundingYear,
+          annualFinances: company.annualFinances?.slice(-3),
+        }
+      : null,
+  });
+}
+
+async function getPortfolio(): Promise<string> {
+  const [cashRes, heldRes] = await Promise.all([
+    fetch(`${JAVA_API_URL}/api/getCash`),
+    fetch(`${JAVA_API_URL}/api/getUnlistedStock`),
+  ]);
+  const cash = await cashRes.json();
+  const held = await heldRes.json();
+
+  const holdings = Object.values(held).map((s: any) => ({
+    symbol: s.name,
+    shares: s.shares,
+    price: s.price,
+  }));
+
+  return JSON.stringify({ cash, holdings, totalHoldings: holdings.length });
+}
+
+async function buyStock(
+  name: string,
+  shares: number,
+  price: number
+): Promise<string> {
+  const res = await fetch(`${JAVA_API_URL}/api/placeBuyOrder`, {
+    method: "POST",
+    body: JSON.stringify({ name, shares, price }),
+    headers: { "Content-Type": "application/json" },
+  });
+  return await res.text();
+}
+
+async function sellStock(
+  name: string,
+  shares: number,
+  price: number
+): Promise<string> {
+  const res = await fetch(`${JAVA_API_URL}/api/placeSellOrder`, {
+    method: "POST",
+    body: JSON.stringify({ name, shares, price }),
+    headers: { "Content-Type": "application/json" },
+  });
+  return await res.text();
+}
+
+// Tool dispatcher
+const toolFunctions: Record<string, (args: any) => Promise<string>> = {
+  getMarketOverview: () => getMarketOverview(),
+  getStockDetail: (args) => getStockDetail(args.name),
+  getPortfolio: () => getPortfolio(),
+  buyStock: (args) => buyStock(args.name, args.shares, args.price),
+  sellStock: (args) => sellStock(args.name, args.shares, args.price),
+};
+
+const SYSTEM_PROMPT = `You are an AI stock trading agent managing a portfolio in a simulated stock market.
+
+Your goal is to grow your portfolio value over time by making smart trades. You are competing against 15,000 simple algorithmic bots (passive, medium, and aggressive strategies).
+
+Strategy guidelines:
+- Start each evaluation by checking your portfolio, then scan the market overview
+- Look for stocks with high positive hype AND strong growth — these have momentum
+- Look for undervalued stocks with low hype but solid financials — these are value plays
+- Diversify across multiple stocks, don't put everything in one
+- Keep some cash reserve (at least 10-20%) for opportunities
+- When selling, set prices slightly above market price; when buying, set prices at or slightly below market price
+- Use getStockDetail to dig into financials before making large trades
+- Don't overtrade — only act when you see a clear opportunity
+- Consider the company's size, founding year, revenue trends, and debt levels
+
+When you're done analyzing and trading, respond with a brief summary of what you did and why.`;
+
+export async function POST() {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let contents: any[] = [
+      {
+        role: "user",
+        parts: [
+          {
+            text: "Evaluate the current market conditions and manage the portfolio. Check your holdings, scan the market, investigate any interesting opportunities, and make trades if appropriate.",
+          },
+        ],
+      },
+    ];
+
+    const config = {
+      tools,
+      systemInstruction: SYSTEM_PROMPT,
+      toolConfig: {
+        functionCallingConfig: {
+          mode: FunctionCallingConfigMode.AUTO,
+        },
+      },
+    };
+
+    let finalText = "";
+    let actions: string[] = [];
+    let iterations = 0;
+    const maxIterations = 15;
+
+    while (iterations < maxIterations) {
+      iterations++;
+
+      const result = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents,
+        config,
+      });
+
+      if (result.functionCalls && result.functionCalls.length > 0) {
+        // Process each function call
+        for (const functionCall of result.functionCalls) {
+          const fnName = functionCall.name ?? "";
+          const args = functionCall.args ?? {};
+
+          if (!toolFunctions[fnName]) {
+            throw new Error(`Unknown function: ${fnName}`);
+          }
+
+          const toolResponse = await toolFunctions[fnName](args);
+
+          // Track buy/sell actions for the activity log
+          if (fnName === "buyStock") {
+            actions.push(
+              `BUY ${args.shares} ${args.name} @ $${args.price}`
+            );
+          } else if (fnName === "sellStock") {
+            actions.push(
+              `SELL ${args.shares} ${args.name} @ $${args.price}`
+            );
+          }
+
+          // Add model's function call to conversation
+          contents.push({
+            role: "model",
+            parts: [{ functionCall }],
+          });
+
+          // Add function result
+          contents.push({
+            role: "user",
+            parts: [
+              {
+                functionResponse: {
+                  name: functionCall.name,
+                  response: { result: toolResponse },
+                },
+              },
+            ],
+          });
+        }
+      } else {
+        // Model is done — final text response
+        finalText = result.text || "Evaluation complete.";
+        break;
+      }
+    }
+
+    const action =
+      actions.length > 0 ? actions.join(", ") : "HOLD — no action taken";
+
+    const activity: AgentActivity = {
+      id: `eval-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      reasoning: finalText,
+      action,
+    };
+
+    return NextResponse.json(activity);
+  } catch (error) {
+    console.error("Agent evaluation error:", error);
+
+    const activity: AgentActivity = {
+      id: `eval-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      reasoning: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      action: "HOLD — error occurred",
+    };
+
+    return NextResponse.json(activity);
+  }
 }
