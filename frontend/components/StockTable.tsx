@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Stock } from "@/lib/types";
 
-type SortKey = "symbol" | "price" | "hype" | "sixMonthGrowth";
+type SortKey = "symbol" | "price" | "hype" | "growth";
 
 export default function StockTable({
   stocks,
@@ -48,8 +48,8 @@ export default function StockTable({
       case "hype":
         cmp = a.hype - b.hype;
         break;
-      case "sixMonthGrowth":
-        cmp = (a.sixMonthGrowth ?? -Infinity) - (b.sixMonthGrowth ?? -Infinity);
+      case "growth":
+        cmp = (a.fiveYearGrowth ?? -Infinity) - (b.fiveYearGrowth ?? -Infinity);
         break;
       default:
         cmp = 0;
@@ -104,8 +104,8 @@ export default function StockTable({
               <th className={headerClass} onClick={() => handleSort("hype")}>
                 Hype{arrow("hype")}
               </th>
-              <th className={headerClass} onClick={() => handleSort("sixMonthGrowth")}>
-                6M{arrow("sixMonthGrowth")}
+              <th className={headerClass} onClick={() => handleSort("growth")}>
+                5Y{arrow("growth")}
               </th>
             </tr>
           </thead>
@@ -141,9 +141,9 @@ export default function StockTable({
                   {stock.hype > 0 ? "+" : ""}
                   {stock.hype}
                 </td>
-                <td className={`px-3 py-2 font-mono text-sm ${growthColor(stock.sixMonthGrowth)}`}>
-                  {stock.sixMonthGrowth !== null
-                    ? `${stock.sixMonthGrowth > 0 ? "+" : ""}${stock.sixMonthGrowth.toFixed(1)}%`
+                <td className={`px-3 py-2 font-mono text-sm ${growthColor(stock.fiveYearGrowth)}`}>
+                  {stock.fiveYearGrowth !== null
+                    ? `${stock.fiveYearGrowth > 0 ? "+" : ""}${stock.fiveYearGrowth.toFixed(1)}%`
                     : "—"}
                 </td>
               </tr>

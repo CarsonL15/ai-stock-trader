@@ -70,10 +70,23 @@ export default function Dashboard() {
 
   const selectedStock = stocks.find((s) => s.symbol === selectedSymbol) ?? null;
 
+  const backendDown = !loading && stocks.length === 0;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-gray-400 text-lg">Loading market data...</div>
+      </div>
+    );
+  }
+
+  if (backendDown) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-lg font-bold">Backend Unavailable</div>
+          <div className="text-gray-500 mt-2">Cannot connect to the Java market server. Make sure it is running.</div>
+        </div>
       </div>
     );
   }

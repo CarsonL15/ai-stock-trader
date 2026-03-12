@@ -1,10 +1,4 @@
 import { Stock, Portfolio, AgentActivity, MarketClock } from "./types";
-import {
-  mockStocks,
-  mockAgentPortfolio,
-  mockAgentActivities,
-  mockClock,
-} from "./mockData";
 
 // Use the proxy route to avoid mixed content (HTTPS -> HTTP) issues
 const API_BASE = "/api/proxy";
@@ -102,27 +96,25 @@ function parseDateString(dateStr: string): MarketClock {
   return { year, month, day, quarter };
 }
 
-// API functions
+// API functions — no mock fallbacks, errors will surface in the UI
 
 export async function getStocks(): Promise<Stock[]> {
-  try {
-    const [listingsRes, companiesRes] = await Promise.all([
-      fetch(`${API_BASE}/getAllStockListingInfo`),
-      fetch(`${API_BASE}/getAllCompanyInfo`),
-    ]);
-    if (!listingsRes.ok || !companiesRes.ok) return mockStocks;
-    const listings: BackendStockListing[] = await listingsRes.json();
-    const companies: BackendCompany[] = await companiesRes.json();
-
-    const companyMap = new Map<string, BackendCompany>();
-    for (const c of companies) {
-      companyMap.set(c.companyName, c);
-    }
-
-    return listings.map((l) => transformStock(l, companyMap.get(l.associatedCompanyName)));
-  } catch {
-    return mockStocks;
+  const [listingsRes, companiesRes] = await Promise.all([
+    fetch(`${API_BASE}/getAllStockListingInfo`),
+    fetch(`${API_BASE}/getAllCompanyInfo`),
+  ]);
+  if (!listingsRes.ok || !companiesRes.ok) {
+    throw new Error("Failed to fetch stock data from backend");
   }
+  const listings: BackendStockListing[] = await listingsRes.json();
+  const companies: BackendCompany[] = await companiesRes.json();
+
+  const companyMap = new Map<string, BackendCompany>();
+  for (const c of companies) {
+    companyMap.set(c.companyName, c);
+  }
+
+  return listings.map((l) => transformStock(l, companyMap.get(l.associatedCompanyName)));
 }
 
 export async function getStockDetail(symbol: string): Promise<Stock | null> {
@@ -131,44 +123,39 @@ export async function getStockDetail(symbol: string): Promise<Stock | null> {
 }
 
 export async function getLlmPortfolio(): Promise<Portfolio> {
-  try {
-    const [cashRes, heldRes] = await Promise.all([
-      fetch(`${API_BASE}/getCash`),
-      fetch(`${API_BASE}/getUnlistedStock`),
-    ]);
-    if (!cashRes.ok || !heldRes.ok) return mockAgentPortfolio;
-    const cash: number = await cashRes.json();
-    const held: Record<string, { shares: number; name: string; price: number }> = await heldRes.json();
-
-    const holdings = Object.values(held).map((s) => ({
-      symbol: s.name,
-      shares: s.shares,
-      price: s.price,
-    }));
-
-    return { cash, holdings };
-  } catch {
-    return mockAgentPortfolio;
+  const [cashRes, heldRes] = await Promise.all([
+    fetch(`${API_BASE}/getCash`),
+    fetch(`${API_BASE}/getUnlistedStock`),
+  ]);
+  if (!cashRes.ok || !heldRes.ok) {
+    throw new Error("Failed to fetch portfolio data from backend");
   }
+  const cash: number = await cashRes.json();
+  const held: Record<string, { shares: number; name: string; price: number }> = await heldRes.json();
+
+  const holdings = Object.values(held).map((s) => ({
+    symbol: s.name,
+    shares: s.shares,
+    price: s.price,
+  }));
+
+  return { cash, holdings };
 }
 
 export async function getClock(): Promise<MarketClock> {
-  try {
-    const res = await fetch(`${API_BASE}/getDate`);
-    if (!res.ok) return mockClock;
-    const dateStr: string = await res.text();
-    return parseDateString(dateStr);
-  } catch {
-    return mockClock;
+  const res = await fetch(`${API_BASE}/getDate`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch clock data from backend");
   }
+  const dateStr: string = await res.text();
+  return parseDateString(dateStr);
 }
 
 export async function evaluateAgent(): Promise<AgentActivity> {
-  // In production, this calls our Next.js API route which calls Claude
   const res = await fetch("/api/agent/evaluate", { method: "POST" });
   return res.json();
 }
 
 export function getAgentActivityLog(): AgentActivity[] {
-  return mockAgentActivities;
+  return [];
 }
