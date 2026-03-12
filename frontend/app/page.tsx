@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Stock, Portfolio, AgentActivity, MarketClock as ClockType } from "@/lib/types";
 import { getStocks, getLlmPortfolio, getClock, evaluateAgent, getAgentActivityLog } from "@/lib/api";
 import MarketClock from "@/components/MarketClock";
 import StockTable from "@/components/StockTable";
 import PriceChart from "@/components/PriceChart";
 import AgentPanel from "@/components/AgentPanel";
+import PortfolioChart from "@/components/PortfolioChart";
 
 export default function Dashboard() {
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<AgentActivity[]>([]);
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const evaluating = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -47,9 +49,11 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Agent auto-evaluates every 30 seconds
+  // Agent auto-evaluates every 15 seconds (skips if previous eval still running)
   useEffect(() => {
     const interval = setInterval(async () => {
+      if (evaluating.current) return;
+      evaluating.current = true;
       try {
         const activity = await evaluateAgent();
         setActivities((prev) => [...prev, activity]);
@@ -57,8 +61,10 @@ export default function Dashboard() {
         setPortfolio(portfolioData);
       } catch (err) {
         console.error("Agent evaluation failed:", err);
+      } finally {
+        evaluating.current = false;
       }
-    }, 30000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -91,13 +97,16 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Right: Chart + Agent */}
+        {/* Right: Charts + Agent */}
         <div className="flex-1 flex flex-col overflow-y-auto p-4 gap-4">
+          {/* Portfolio Value Chart */}
+          <PortfolioChart activities={activities} />
+
           {/* Price Chart */}
           {selectedStock ? (
             <PriceChart stock={selectedStock} />
           ) : (
-            <div className="bg-gray-900 rounded-lg border border-gray-800 p-8 flex items-center justify-center min-h-[350px]">
+            <div className="bg-gray-900 rounded-lg border border-gray-800 p-8 flex items-center justify-center min-h-[300px]">
               <p className="text-gray-500">
                 Select a stock to view its price chart
               </p>

@@ -50,6 +50,7 @@ export interface AgentActivity {
   timestamp: string;
   reasoning: string;
   action: string;           // e.g. "BUY 50 ACME @ $12.50" or "HOLD — no good opportunities"
+  portfolioValue?: number;  // total portfolio value at time of evaluation
 }
 
 export interface MarketClock {

@@ -344,11 +344,30 @@ export async function POST() {
     const action =
       actions.length > 0 ? actions.join(", ") : "HOLD — no action taken";
 
+    // Fetch current portfolio value for the chart
+    let portfolioValue = 0;
+    try {
+      const [cashRes, heldRes] = await Promise.all([
+        fetch(`${JAVA_API_URL}/api/getCash`),
+        fetch(`${JAVA_API_URL}/api/getUnlistedStock`),
+      ]);
+      const cash = await cashRes.json();
+      const held = await heldRes.json();
+      const holdingsValue = Object.values(held).reduce(
+        (sum: number, s: any) => sum + s.shares * s.price,
+        0
+      );
+      portfolioValue = cash + holdingsValue;
+    } catch {
+      // ignore — value stays 0
+    }
+
     const activity: AgentActivity = {
       id: `eval-${Date.now()}`,
       timestamp: new Date().toISOString(),
       reasoning: finalText,
       action,
+      portfolioValue,
     };
 
     return NextResponse.json(activity);
