@@ -6,7 +6,8 @@ import {
   mockClock,
 } from "./mockData";
 
-const JAVA_API_URL = process.env.NEXT_PUBLIC_JAVA_API_URL || "";
+// Use the proxy route to avoid mixed content (HTTPS -> HTTP) issues
+const API_BASE = "/api/proxy";
 
 // Backend response shapes (what the Java API actually returns)
 
@@ -104,11 +105,12 @@ function parseDateString(dateStr: string): MarketClock {
 // API functions
 
 export async function getStocks(): Promise<Stock[]> {
-  if (JAVA_API_URL) {
+  try {
     const [listingsRes, companiesRes] = await Promise.all([
-      fetch(`${JAVA_API_URL}/api/getAllStockListingInfo`),
-      fetch(`${JAVA_API_URL}/api/getAllCompanyInfo`),
+      fetch(`${API_BASE}/getAllStockListingInfo`),
+      fetch(`${API_BASE}/getAllCompanyInfo`),
     ]);
+    if (!listingsRes.ok || !companiesRes.ok) return mockStocks;
     const listings: BackendStockListing[] = await listingsRes.json();
     const companies: BackendCompany[] = await companiesRes.json();
 
@@ -118,24 +120,23 @@ export async function getStocks(): Promise<Stock[]> {
     }
 
     return listings.map((l) => transformStock(l, companyMap.get(l.associatedCompanyName)));
+  } catch {
+    return mockStocks;
   }
-  return mockStocks;
 }
 
 export async function getStockDetail(symbol: string): Promise<Stock | null> {
-  if (JAVA_API_URL) {
-    const stocks = await getStocks();
-    return stocks.find((s) => s.symbol === symbol) ?? null;
-  }
-  return mockStocks.find((s) => s.symbol === symbol) ?? null;
+  const stocks = await getStocks();
+  return stocks.find((s) => s.symbol === symbol) ?? null;
 }
 
 export async function getLlmPortfolio(): Promise<Portfolio> {
-  if (JAVA_API_URL) {
+  try {
     const [cashRes, heldRes] = await Promise.all([
-      fetch(`${JAVA_API_URL}/api/getCash`),
-      fetch(`${JAVA_API_URL}/api/getUnlistedStock`),
+      fetch(`${API_BASE}/getCash`),
+      fetch(`${API_BASE}/getUnlistedStock`),
     ]);
+    if (!cashRes.ok || !heldRes.ok) return mockAgentPortfolio;
     const cash: number = await cashRes.json();
     const held: Record<string, { shares: number; name: string; price: number }> = await heldRes.json();
 
@@ -146,17 +147,20 @@ export async function getLlmPortfolio(): Promise<Portfolio> {
     }));
 
     return { cash, holdings };
+  } catch {
+    return mockAgentPortfolio;
   }
-  return mockAgentPortfolio;
 }
 
 export async function getClock(): Promise<MarketClock> {
-  if (JAVA_API_URL) {
-    const res = await fetch(`${JAVA_API_URL}/api/getDate`);
+  try {
+    const res = await fetch(`${API_BASE}/getDate`);
+    if (!res.ok) return mockClock;
     const dateStr: string = await res.text();
     return parseDateString(dateStr);
+  } catch {
+    return mockClock;
   }
-  return mockClock;
 }
 
 export async function evaluateAgent(): Promise<AgentActivity> {
