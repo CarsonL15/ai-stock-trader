@@ -16,7 +16,7 @@ public class GlobalOrderQueue {
     }
 
     public synchronized void newDay(){
-        if(globalQueue.size() > 5000){
+        while(globalQueue.size() > 5000){
             try {
                 wait();
             } catch (InterruptedException e) {
