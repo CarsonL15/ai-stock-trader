@@ -23,7 +23,7 @@ public class OrderQueue {
 
     public  void listBuyOrder(Stock s){
         buyQueue.add(s);
-        Market.updateGlobalOrderQueue(this);
+        //Market.updateGlobalOrderQueue(this);
     }
 
     public  void unListBuyOrder(Stock s){
@@ -33,16 +33,16 @@ public class OrderQueue {
     public  void listSellOrder(Stock s){
 
         sellQueue.add(s);
-        Market.updateGlobalOrderQueue(this);
+        //Market.updateGlobalOrderQueue(this);
     }
 
     public  void unListSellOrder(Stock s){
         sellQueue.remove(s);
     }
 
-    public void addOrderQueueToGlobal(){
-        Market.updateGlobalOrderQueue(this);
-    }
+//    public void addOrderQueueToGlobal(){
+//        Market.updateGlobalOrderQueue(this);
+//    }
 
     public synchronized void checkOrders(){
 //        if(buyQueue.peek() !=null && sellQueue.peek() != null) {
@@ -51,10 +51,14 @@ public class OrderQueue {
 //            double temp2 = sellQueue.peek().getPrice();
 //            System.out.println("");
 //        }
-
-        while (hasNextOrder()) {
-            acquire(sellQueue.peek(), buyQueue.peek());
+        int j = 0;
+        for(int i = 0; i < 3; i++){
+            while (hasNextOrder()) {
+                j++;
+                acquire(sellQueue.peek(), buyQueue.peek());
+            }
         }
+
     }
 
     public synchronized boolean hasNextOrder(){
@@ -81,17 +85,19 @@ public class OrderQueue {
         if(buyOrder != null) {
             buyOrder.getOwner().getBuySellLock();
         }else{
+            Market.buyOrderNull();
             return false;
         }
         if(sellOrder != null) {
             sellOrder.getOwner().getBuySellLock();
         }else{
+            Market.sellOrderNull();
             return false;
         }
 
 
 
-        if (sellOrder != null && buyOrder != null && buyOrder.getOwner().checkBuy(sellOrder.getPrice() * buyOrder.getShareCount())) {
+        if (sellOrder != null && buyOrder != null && buyOrder.getOwner().checkBuy(sellOrder.getPrice() * Math.min(sellOrder.getShareCount(),buyOrder.getShareCount()))) {
 
             if (buyOrder.getShareCount() > sellOrder.getShareCount()) {
                 Stock tempStock = new Stock(sellOrder.getShareCount(), sellOrder.getStockName(), sellOrder.getPrice(), sellOrder.getOwner());
@@ -129,6 +135,8 @@ public class OrderQueue {
             }
             queueOwner.lastSale(sellOrder.getPrice());
             Market.orderCount();
+        }else{
+            Market.priceMismatch();
         }
 
         buyOrder.getOwner().unlockBuySellLock();
