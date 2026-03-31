@@ -1,5 +1,7 @@
 package market;
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 //import ThreadHandlers.BotThread;
 import bots.TradingBotBasic;
@@ -8,9 +10,10 @@ import company.Company;
 import company.StatsComparator;
 import market.orders.GlobalOrderQueue;
 import market.orders.OrderQueue;
-import market.orders.QueueForOrderUpdates;
 
 public class Market {
+
+    protected static Lock statsLock = new ReentrantLock();
 
     private static String GLOBAL_INCREMENTING_NAME = "000";
 
@@ -34,13 +37,16 @@ public class Market {
     private static HashMap<String,Thread> botThreadStorage;
     private static ArrayList<Thread> transactionHandlers;
     private static GlobalOrderQueue orderMarket;
-    private static QueueForOrderUpdates orderStorage;
+    //private static QueueForOrderUpdates orderStorage;
     private static Thread orderQueuer = new Thread(new OrderEnqueueThread(),"OrderQueuer");
     private static Thread dayThread;
     private static Thread monthThread;
 
     private static long orderCount = 0;
     private static long tryOrderCount = 0;
+    private static long buyOrderNull = 0;
+    private static long sellOrderNull = 0;
+    private static long priceMismatch = 0;
 
 
 
@@ -79,7 +85,7 @@ public class Market {
         botThreadStorage = new HashMap<>();
         UpdateMonth.initialSetupForTop200();
         orderMarket = new GlobalOrderQueue();
-        orderStorage = new QueueForOrderUpdates();
+        //orderStorage = new QueueForOrderUpdates();
 
 //        botThreadStorage.add(new Thread(new TradingBotBasic.BotThread(new ArrayList<>(bots.subList(0,300))),"botThread1"));
 //        botThreadStorage.get(0).start();
@@ -91,15 +97,16 @@ public class Market {
             transactionHandlers.add(new Thread(new OrderQueue.OrderQueueThread(orderMarket),"OrderHandler " + i));
             transactionHandlers.get(i).start();
         }
-        orderQueuer.start();
+
+//        orderQueuer.start();
 
 
 
     }
 
-    public static void updateGlobalOrderQueue(OrderQueue q){
-        orderStorage.enqueue(q);
-    }
+//    public static void updateGlobalOrderQueue(OrderQueue q){
+//        orderStorage.enqueue(q);
+//    }
 
     public static void finishedEval(String thread){
         botThreadStorage.remove(thread);
@@ -119,6 +126,13 @@ public class Market {
                 botThreadStorage.get("BotThread-" + i).start();
             }
         }
+
+        orderQueuer = new Thread(new OrderEnqueueThread());
+        orderQueuer.start();
+
+
+
+
 
 
 
@@ -353,11 +367,33 @@ public class Market {
     }
 
     public static void orderCount(){
+        statsLock.lock();
         orderCount++;
+        statsLock.unlock();
     }
 
     public static void tryOrderCount(){
+        statsLock.lock();
         tryOrderCount++;
+        statsLock.unlock();
+    }
+
+    public static void buyOrderNull(){
+        statsLock.lock();
+        buyOrderNull++;
+        statsLock.unlock();
+    }
+
+    public static void sellOrderNull(){
+        statsLock.lock();
+        sellOrderNull++;
+        statsLock.unlock();
+    }
+
+    public static void priceMismatch(){
+        statsLock.lock();
+        priceMismatch++;
+        statsLock.unlock();
     }
 
     public static class OrderEnqueueThread implements Runnable{
@@ -365,10 +401,7 @@ public class Market {
 
         @Override
         public void run(){
-            while(true){
-
-                orderMarket.enqueue(orderStorage.dequeue());
-            }
+                orderMarket.newDay();
         }
     }
 
@@ -382,7 +415,9 @@ public class Market {
                 s.monthUpdated();
             }
 
-
+            for(TradingBotBasic bot : bots){
+                bot.MonthlySalary();
+            }
 
             bestStockFastGrowth = calculateStockSixMonthGrowth();
             bestStockSlowGrowth = calculateStockFiveYearGrowth();
@@ -430,10 +465,18 @@ public class Market {
 
         @Override
         public void run(){
-            //System.out.println(orderCount + " Orders made today");
-            //System.out.println(tryOrderCount + " Orders Attempted today");
+            statsLock.lock();
+            System.out.println(orderCount + " Orders made today");
+            System.out.println(tryOrderCount + " Orders Attempted today");
+            System.out.println(buyOrderNull + " orders rejected due to buyOrderNull");
+            System.out.println(sellOrderNull + " orders rejected due to sellOrderNull");
+            System.out.println(priceMismatch + " orders rejected due to priceMisMatch");
+            buyOrderNull = 0;
+            sellOrderNull = 0;
+            priceMismatch = 0;
             orderCount = 0;
             tryOrderCount = 0;
+            statsLock.unlock();
             for(Company c : companies.values()){
                 c.updateDay(day);
             }
@@ -445,16 +488,16 @@ public class Market {
         }
     }
 
-//    protected static void loopUpdate(){
-//        while(true){
-//            try{
-//                Thread.sleep(4000);
-//                System.out.print("");
-//            }catch (InterruptedException e){
-//
-//            }
-//        }
-//    }
+    protected static void loopUpdate(){
+        while(true){
+            try{
+                Thread.sleep(4000);
+                System.out.print("");
+            }catch (InterruptedException e){
+
+            }
+        }
+    }
     
 
 }
