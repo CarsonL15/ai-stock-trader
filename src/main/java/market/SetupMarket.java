@@ -79,7 +79,7 @@ public class SetupMarket extends Market {
 
 
         System.out.println("done with setup");
-        loopUpdate();
+        //loopUpdate();
 
 
         
