@@ -1,5 +1,7 @@
 package market;
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 //import ThreadHandlers.BotThread;
 import bots.TradingBotBasic;
@@ -10,6 +12,8 @@ import market.orders.GlobalOrderQueue;
 import market.orders.OrderQueue;
 
 public class Market {
+
+    protected static Lock statsLock = new ReentrantLock();
 
     private static String GLOBAL_INCREMENTING_NAME = "000";
 
@@ -363,23 +367,33 @@ public class Market {
     }
 
     public static void orderCount(){
+        statsLock.lock();
         orderCount++;
+        statsLock.unlock();
     }
 
     public static void tryOrderCount(){
+        statsLock.lock();
         tryOrderCount++;
+        statsLock.unlock();
     }
 
     public static void buyOrderNull(){
+        statsLock.lock();
         buyOrderNull++;
+        statsLock.unlock();
     }
 
     public static void sellOrderNull(){
+        statsLock.lock();
         sellOrderNull++;
+        statsLock.unlock();
     }
 
     public static void priceMismatch(){
+        statsLock.lock();
         priceMismatch++;
+        statsLock.unlock();
     }
 
     public static class OrderEnqueueThread implements Runnable{
@@ -401,7 +415,9 @@ public class Market {
                 s.monthUpdated();
             }
 
-
+            for(TradingBotBasic bot : bots){
+                bot.MonthlySalary();
+            }
 
             bestStockFastGrowth = calculateStockSixMonthGrowth();
             bestStockSlowGrowth = calculateStockFiveYearGrowth();
@@ -449,6 +465,7 @@ public class Market {
 
         @Override
         public void run(){
+            statsLock.lock();
             System.out.println(orderCount + " Orders made today");
             System.out.println(tryOrderCount + " Orders Attempted today");
             System.out.println(buyOrderNull + " orders rejected due to buyOrderNull");
@@ -459,6 +476,7 @@ public class Market {
             priceMismatch = 0;
             orderCount = 0;
             tryOrderCount = 0;
+            statsLock.unlock();
             for(Company c : companies.values()){
                 c.updateDay(day);
             }

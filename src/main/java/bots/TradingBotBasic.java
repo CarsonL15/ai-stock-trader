@@ -1,12 +1,9 @@
 package bots;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import market.GlobalClock;
 import market.Market;
@@ -54,12 +51,16 @@ public abstract class TradingBotBasic {
         }
     }
 
+    public synchronized void insufficientCash(Stock s){
+        buyOrders.remove(s.getStockName());
+    }
+
     public synchronized void unlockBuySellLock(){
         buySellLock.unlock();
         notifyAll();
     }
 
-    public void MonthlySalary(){
+    public synchronized void MonthlySalary(){
         cash += (wealth * wealth) * 1000;
     }
 
@@ -664,7 +665,7 @@ public abstract class TradingBotBasic {
 
         public BotThread(ArrayList<TradingBotBasic> botList,int num){
             this.botList = botList;
-            this.num = num;
+            this.num = 10;
         }
 
         @Override
@@ -674,7 +675,7 @@ public abstract class TradingBotBasic {
 
 
                 for (TradingBotBasic b : botList) {
-                    if(R.nextInt(0,5) == num) {
+                    if(R.nextInt(0,11) == num) {
                         b.evaluate();
                         i++;
                     }

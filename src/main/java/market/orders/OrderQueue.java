@@ -56,6 +56,13 @@ public class OrderQueue {
             while (hasNextOrder()) {
                 j++;
                 acquire(sellQueue.peek(), buyQueue.peek());
+                if(j > 20000){
+                    if(j > 20001) {
+                        break;
+                    }
+                    System.out.println("repeated 20000 times on stock " + queueOwner.getName());
+
+                }
             }
         }
 
@@ -130,12 +137,16 @@ public class OrderQueue {
                 Stock tempStock = new Stock(sellOrder.getShareCount(),sellOrder.getStockName(),sellOrder.getPrice(),sellOrder.getOwner());
                 buyOrder.getOwner().completeBuyOrder(tempStock);
                 sellOrder.getOwner().completeSellOrder(tempStock);
+                buyQueue.remove(buyOrder);
+                sellQueue.remove(sellOrder);
 
 
             }
             queueOwner.lastSale(sellOrder.getPrice());
             Market.orderCount();
         }else{
+            buyOrder.getOwner().insufficientCash(buyOrder);
+            buyQueue.remove(buyOrder);
             Market.priceMismatch();
         }
 
