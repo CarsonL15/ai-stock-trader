@@ -1,12 +1,9 @@
 package bots;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import market.GlobalClock;
 import market.Market;
@@ -54,12 +51,16 @@ public abstract class TradingBotBasic {
         }
     }
 
+    public synchronized void insufficientCash(Stock s){
+        buyOrders.remove(s.getStockName());
+    }
+
     public synchronized void unlockBuySellLock(){
         buySellLock.unlock();
         notifyAll();
     }
 
-    public void MonthlySalary(){
+    public synchronized void MonthlySalary(){
         cash += (wealth * wealth) * 1000;
     }
 
@@ -138,6 +139,15 @@ public abstract class TradingBotBasic {
 
     }
 
+    protected synchronized void unlistSellOrder(Stock s){
+        Market.getStockListing(s.getStockName()).unListSellOrder(sellOrders.get(s.getStockName()));
+        if(stockHeld.containsKey(s.getStockName())){
+            stockHeld.get(s.getStockName()).addShares(s.getShareCount());
+        }else{
+            stockHeld.put(s.getStockName(),s);
+        }
+    }
+
     protected synchronized void listBuyOrder(Stock s){
         if(buyOrders.containsKey(s.getStockName())) {
             Market.getStockListing(s.getStockName()).unListBuyOrder(buyOrders.get(s.getStockName()));
@@ -148,6 +158,10 @@ public abstract class TradingBotBasic {
         // global buy order list for stocklisting
 
         Market.getStockListing(s.getStockName()).listBuyOrder(s);
+    }
+
+    protected synchronized void unlistBuyOrder(Stock s){
+        Market.getStockListing(s.getStockName()).unListBuyOrder(buyOrders.get(s.getStockName()));
     }
 
     public synchronized boolean checkBuy(double cost){
@@ -366,56 +380,59 @@ public abstract class TradingBotBasic {
 
         for (Stock s : stockHeld.values()) {
 
-            StockListing stockListing = Market.getStockListing(s.getStockName());
 
-            if (idiot >= 7 && shortTerm) {
-                if (trust && stockListing.getSixMonthGrowth() < -30) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-                } else if (!trust && stockListing.getSixMonthGrowth() < -10) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.8, .9),stockListing), this));
+
+
+                StockListing stockListing = Market.getStockListing(s.getStockName());
+
+                if (idiot >= 7 && shortTerm) {
+                    if (trust && stockListing.getSixMonthGrowth() < -30) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+                    } else if (!trust && stockListing.getSixMonthGrowth() < -10) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.8, .9), stockListing), this));
+                    }
                 }
-            }
 
-            if (idiot <= 6 && shortTerm) {
-                if (trust && stockListing.getAvgSixMonthGrowth() < -30) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-                } else if (!trust && stockListing.getAvgSixMonthGrowth() < -10) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.8, .9),stockListing), this));
+                if (idiot <= 6 && shortTerm) {
+                    if (trust && stockListing.getAvgSixMonthGrowth() < -30) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+                    } else if (!trust && stockListing.getAvgSixMonthGrowth() < -10) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.8, .9), stockListing), this));
+                    }
                 }
-            }
 
-            if(idiot >= 7 && sustainability){
-                if (trust && stockListing.getFiveYearGrowth() < -30) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-                } else if (!trust && stockListing.getFiveYearGrowth() < -10) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.8, .9),stockListing), this));
+                if (idiot >= 7 && sustainability) {
+                    if (trust && stockListing.getFiveYearGrowth() < -30) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+                    } else if (!trust && stockListing.getFiveYearGrowth() < -10) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.8, .9), stockListing), this));
+                    }
                 }
-            }
 
-            if(idiot <= 6 && sustainability){
-                if (trust && stockListing.getCompany().getAvgFiveYearCompanyGrowth() < -30) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-                } else if (!trust && stockListing.getCompany().getAvgFiveYearCompanyGrowth() < -10) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.8, .9),stockListing), this));
+                if (idiot <= 6 && sustainability) {
+                    if (trust && stockListing.getCompany().getAvgFiveYearCompanyGrowth() < -30) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+                    } else if (!trust && stockListing.getCompany().getAvgFiveYearCompanyGrowth() < -10) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.8, .9), stockListing), this));
+                    }
                 }
-            }
 
-            if (hypeAffect) {
-                if (stockListing.getHype() < -50) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.4, .5),stockListing), this));
-                } else if (stockListing.getHype() < 0) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.5, .8),stockListing), this));
-                } else if (stockListing.getHype() < 20) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-                } else if (stockListing.getHype() > 50) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.4, 1.5),stockListing), this));
-                } else if (stockListing.getHype() > 80) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.7, 1.8),stockListing), this));
+                if (hypeAffect) {
+                    if (stockListing.getHype() < -50) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.4, .5), stockListing), this));
+                    } else if (stockListing.getHype() < 0) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.5, .8), stockListing), this));
+                    } else if (stockListing.getHype() < 20) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+                    } else if (stockListing.getHype() > 50) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.4, 1.5), stockListing), this));
+                    } else if (stockListing.getHype() > 80) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.7, 1.8), stockListing), this));
+                    }
                 }
-            }
-
 
         }
+
 
         for(Stock s : tempOrder.values()){
             listSellOrder(s,false);
@@ -447,75 +464,86 @@ public abstract class TradingBotBasic {
         /* This section looks at existing buy and sell orders and updates them based on their personalities/traits  starts with buy orders
            ends with sell orders */
         tempOrder.clear();
+        ArrayList<Stock> removeOrders = new ArrayList<>();
         for (Stock s : buyOrders.values()) {
 
             StockListing stockListing = Market.getStockListing(s.getStockName());
 
-            if (idiot >= 7 && shortTerm) {
-                if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 < -0.2) { // if the price drops by 20% or more
+            if(s.getShareCount() * s.getPrice() > cash){
+                removeOrders.add(s);
+            }else if(!(s.getDayMade() - GlobalClock.getDay() < -4)) {
 
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
+                if(s.getDayMade() > GlobalClock.getDay() || s.getDayMade() - GlobalClock.getDay() < -8){
+                    removeOrders.add(s);
+                }else {
 
-                } else if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 > 0.2) { // if the price raises by 20% or more
+                    if (idiot >= 7 && shortTerm) {
+                        if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 < -0.2) { // if the price drops by 20% or more
 
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4),stockListing), this));
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
 
+                        } else if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 > 0.2) { // if the price raises by 20% or more
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4), stockListing), this));
+
+                        }
+                    }
+                    if (idiot <= 6 && shortTerm) {
+                        if (stockListing.getAvgSixMonthGrowth() < -20) { // if the price drops by 20% or more on average
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+
+                        } else if (stockListing.getAvgSixMonthGrowth() > 20) { // if the price raises by 20% or more on average
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4), stockListing), this));
+
+                        }
+                    }
+
+                    if (idiot >= 7 && sustainability) {
+                        if (stockListing.getFiveYearGrowth() < -20) { //
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+
+                        } else if (stockListing.getFiveYearGrowth() > 20) { //
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4), stockListing), this));
+
+                        }
+                    }
+                    if (idiot <= 6 && sustainability) {
+                        if (stockListing.getCompany().getAvgFiveYearCompanyGrowth() < -20) { //
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+
+                        } else if (stockListing.getCompany().getAvgFiveYearCompanyGrowth() > 20) { //
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4), stockListing), this));
+
+                        }
+                    }
+
+                    if (hypeAffect) {
+                        if (stockListing.getHype() < -50) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.4, .5), stockListing), this));
+                        } else if (stockListing.getHype() < 0) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.5, .8), stockListing), this));
+                        } else if (stockListing.getHype() < 20) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+                        } else if (stockListing.getHype() > 50) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.4, 1.5), stockListing), this));
+                        } else if (stockListing.getHype() > 80) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.7, 1.8), stockListing), this));
+                        }
+                    }
+
+
+                    if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 <= -0.3) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.7, .8), stockListing), this));
+                    } else if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 >= 0.3) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.3), stockListing), this));
+                    }
                 }
-            }
-            if (idiot <= 6 && shortTerm) {
-                if (stockListing.getAvgSixMonthGrowth() < -20) { // if the price drops by 20% or more on average
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-
-                } else if (stockListing.getAvgSixMonthGrowth() > 20) { // if the price raises by 20% or more on average
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4),stockListing), this));
-
-                }
-            }
-
-            if (idiot >= 7 && sustainability) {
-                if (stockListing.getFiveYearGrowth() < -20) { //
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-
-                } else if (stockListing.getFiveYearGrowth() > 20) { //
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4),stockListing), this));
-
-                }
-            }
-            if (idiot <= 6 && sustainability) {
-                if (stockListing.getCompany().getAvgFiveYearCompanyGrowth() < -20) { //
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-
-                } else if (stockListing.getCompany().getAvgFiveYearCompanyGrowth() > 20) { //
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4),stockListing), this));
-
-                }
-            }
-
-            if (hypeAffect) {
-                if (stockListing.getHype() < -50) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.4, .5),stockListing), this));
-                } else if (stockListing.getHype() < 0) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.5, .8),stockListing), this));
-                } else if (stockListing.getHype() < 20) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-                } else if (stockListing.getHype() > 50) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.4, 1.5),stockListing), this));
-                } else if (stockListing.getHype() > 80) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.7, 1.8),stockListing), this));
-                }
-            }
-
-
-            if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 <= -0.3) {
-                tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.7, .8),stockListing), this));
-            } else if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 >= 0.3) {
-                tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.3),stockListing), this));
             }
         }
 
@@ -523,76 +551,90 @@ public abstract class TradingBotBasic {
             listBuyOrder(s);
         }
 
+        for(Stock s : removeOrders){
+            unlistBuyOrder(s);
+        }
+
         tempOrder.clear();
+        removeOrders.clear();
         for (Stock s : sellOrders.values()) {
 
-            StockListing stockListing = Market.getStockListing(s.getStockName());
-            if (idiot >= 7 && shortTerm) {
-                if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 < -0.2) { // if the price drops by 20% or more
+            if(!(s.getDayMade() - GlobalClock.getDay() < -4)) {
 
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
+                if (s.getDayMade() > GlobalClock.getDay() || s.getDayMade() - GlobalClock.getDay() < -8) {
+                    removeOrders.add(s);
+                } else {
 
-                } else if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 > 0.2) { // if the price raises by 20% or more
+                    StockListing stockListing = Market.getStockListing(s.getStockName());
+                    if (idiot >= 7 && shortTerm) {
+                        if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 < -0.2) { // if the price drops by 20% or more
 
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4),stockListing), this));
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+
+                        } else if ((stockListing.getLastSalePrice() / s.getPrice()) - 1 > 0.2) { // if the price raises by 20% or more
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4), stockListing), this));
+
+                        }
+                    }
+                    if (idiot <= 6 && shortTerm) {
+                        if (stockListing.getAvgSixMonthGrowth() < -20) { // if the price drops by 20% or more on average
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+
+                        } else if (stockListing.getAvgSixMonthGrowth() > 20) { // if the price raises by 20% or more on average
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4), stockListing), this));
+
+                        }
+                    }
+                    if (idiot >= 7 && sustainability) {
+                        if (stockListing.getFiveYearGrowth() < -20) { //
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+
+                        } else if (stockListing.getFiveYearGrowth() > 20) { //
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4), stockListing), this));
+
+                        }
+                    }
+                    if (idiot <= 6 && sustainability) {
+                        if (stockListing.getCompany().getAvgFiveYearCompanyGrowth() < -20) { //
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+
+                        } else if (stockListing.getCompany().getAvgFiveYearCompanyGrowth() > 20) { //
+
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4), stockListing), this));
+
+                        }
+                    }
+
+
+                    if (hypeAffect) {
+                        if (stockListing.getHype() < -50) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.4, .5), stockListing), this));
+                        } else if (stockListing.getHype() < 0) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.5, .8), stockListing), this));
+                        } else if (stockListing.getHype() < 20) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9), stockListing), this));
+                        } else if (stockListing.getHype() > 50) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.4, 1.5), stockListing), this));
+                        } else if (stockListing.getHype() > 80) {
+                            tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.7, 1.8), stockListing), this));
+                        }
+                    }
+
+
+                    if ((stockListing.getLastSalePrice() - 1) <= -0.3) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.7, .8), stockListing), this));
+                    } else if ((stockListing.getLastSalePrice() - 1) >= 0.3) {
+                        tempOrder.put(s.getStockName(), new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.3), stockListing), this));
+                    }
 
                 }
-            }
-            if (idiot <= 6 && shortTerm) {
-                if (stockListing.getAvgSixMonthGrowth() < -20) { // if the price drops by 20% or more on average
 
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-
-                } else if (stockListing.getAvgSixMonthGrowth() > 20) { // if the price raises by 20% or more on average
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4),stockListing), this));
-
-                }
-            }
-            if (idiot >= 7 && sustainability) {
-                if (stockListing.getFiveYearGrowth() < -20) { //
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-
-                } else if (stockListing.getFiveYearGrowth() > 20) { //
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4),stockListing), this));
-
-                }
-            }
-            if (idiot <= 6 && sustainability) {
-                if (stockListing.getCompany().getAvgFiveYearCompanyGrowth() < -20) { //
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-
-                } else if (stockListing.getCompany().getAvgFiveYearCompanyGrowth() > 20) { //
-
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.4),stockListing), this));
-
-                }
-            }
-
-
-
-            if (hypeAffect) {
-                if (stockListing.getHype() < -50) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.4, .5),stockListing), this));
-                } else if (stockListing.getHype() < 0) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.5, .8),stockListing), this));
-                } else if (stockListing.getHype() < 20) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.6, .9),stockListing), this));
-                } else if (stockListing.getHype() > 50) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.4, 1.5),stockListing), this));
-                } else if (stockListing.getHype() > 80) {
-                    tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.7, 1.8),stockListing), this));
-                }
-            }
-
-
-            if ((stockListing.getLastSalePrice() - 1) <= -0.3) {
-                tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(.7, .8),stockListing), this));
-            } else if ((stockListing.getLastSalePrice() - 1) >= 0.3) {
-                tempOrder.put(s.getStockName(),new Stock(s.getShareCount(), s.getStockName(), getCompetentOrderPrice(s.getPrice() * (float) R.nextDouble(1.1, 1.3),stockListing), this));
             }
 
 
@@ -600,6 +642,10 @@ public abstract class TradingBotBasic {
 
         for(Stock s : tempOrder.values()){
             listSellOrder(s,true);
+        }
+
+        for(Stock s : removeOrders){
+            unlistSellOrder(s);
         }
 
         buySellLock.unlock();
@@ -619,7 +665,7 @@ public abstract class TradingBotBasic {
 
         public BotThread(ArrayList<TradingBotBasic> botList,int num){
             this.botList = botList;
-            this.num = num;
+            this.num = 10;
         }
 
         @Override
@@ -629,10 +675,10 @@ public abstract class TradingBotBasic {
 
 
                 for (TradingBotBasic b : botList) {
-                    //if(R.nextInt(0,5) == num) {
+                    if(R.nextInt(0,11) == num) {
                         b.evaluate();
                         i++;
-                    //}
+                    }
                     //System.out.println(Thread.currentThread().getName() + " finished " + i + " evals");
 
 

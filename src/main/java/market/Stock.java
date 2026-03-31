@@ -7,12 +7,14 @@ public class Stock{
     private String name;
     private float price;
     private TradingBotBasic owner;
+    private int dayMade;
 
     public Stock(int shares, String parentStock,float price,TradingBotBasic owner){
         this.shares = shares;
         this.name = parentStock;
         this.price = price;
         this.owner = owner;
+        dayMade = GlobalClock.getDay();
     }
 
     public synchronized int getShareCount(){
@@ -37,6 +39,10 @@ public class Stock{
 
     public TradingBotBasic getOwner(){
         return this.owner;
+    }
+
+    public int getDayMade(){
+     return this.dayMade;
     }
 
 

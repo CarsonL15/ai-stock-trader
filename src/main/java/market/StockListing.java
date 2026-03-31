@@ -84,7 +84,7 @@ public class StockListing{
                     currentPrice *= R.nextFloat(.9f,1.1f);
                 }else if(associatedCompany.getSize() == 3 && currentPrice > 75000){
                     currentPrice *= R.nextFloat(.9f,1.1f);
-                }else if(associatedCompany.getSize() == 3 && currentPrice > 100000){
+                }else if(associatedCompany.getSize() == 4 && currentPrice > 100000){
                     currentPrice *= R.nextFloat(.9f,1.1f);
                 }else if(priceCheck <= 5){
                     currentPrice *= .75f;
@@ -143,13 +143,13 @@ public class StockListing{
             hype -= 20;
         }else if(randomHype <= 5){
             hype -= 10;
-        }else if(randomHype <= 10){
+        }else if(randomHype <= 25){
             hype -= 5;
         }else if(randomHype ==100){
             hype += 20;
         }else if(randomHype >= 95){
             hype += 10;
-        }else if(randomHype >= 90){
+        }else if(randomHype >= 75){
             hype += 5;
         }
 
@@ -252,8 +252,8 @@ public class StockListing{
         orders.unListSellOrder(s);
     }
 
-    public void updateQueue(){
-        orders.addOrderQueueToGlobal();
+    public OrderQueue getOrderQueue(){
+        return orders;
     }
 
     public String getName(){
@@ -331,6 +331,10 @@ public class StockListing{
     public Company getCompany(){
         return associatedCompany;
     }
+
+//    public float getMaxEstimatedValue(){
+//
+//    }
 
             
 }
