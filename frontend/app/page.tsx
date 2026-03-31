@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Stock, Portfolio, AgentActivity, MarketClock as ClockType } from "@/lib/types";
 import { getStocks, getLlmPortfolio, getClock, evaluateAgent, getAgentActivityLog } from "@/lib/api";
 import MarketClock from "@/components/MarketClock";
 import StockTable from "@/components/StockTable";
 import PriceChart from "@/components/PriceChart";
 import AgentPanel from "@/components/AgentPanel";
+import PortfolioChart from "@/components/PortfolioChart";
 
 export default function Dashboard() {
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [activities, setActivities] = useState<AgentActivity[]>([]);
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const evaluating = useRef(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -47,23 +49,28 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Agent auto-evaluates every 30 seconds
+  // Agent auto-evaluates every 15 seconds (skips if previous eval still running)
   useEffect(() => {
     const interval = setInterval(async () => {
+      if (evaluating.current) return;
+      evaluating.current = true;
       try {
         const activity = await evaluateAgent();
         setActivities((prev) => [...prev, activity]);
-        // Refresh portfolio after agent trades
         const portfolioData = await getLlmPortfolio();
         setPortfolio(portfolioData);
       } catch (err) {
         console.error("Agent evaluation failed:", err);
+      } finally {
+        evaluating.current = false;
       }
-    }, 30000);
+    }, 15000);
     return () => clearInterval(interval);
   }, []);
 
   const selectedStock = stocks.find((s) => s.symbol === selectedSymbol) ?? null;
+
+  const backendDown = !loading && stocks.length === 0;
 
   if (loading) {
     return (
@@ -73,50 +80,56 @@ export default function Dashboard() {
     );
   }
 
+  if (backendDown) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-lg font-bold">Backend Unavailable</div>
+          <div className="text-gray-500 mt-2">Cannot connect to the Java market server. Make sure it is running.</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="h-screen bg-black text-white flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-gray-800 px-6 py-3 flex items-center justify-between shrink-0">
         <h1 className="text-xl font-bold tracking-tight">AI Stock Trader</h1>
         {clock && <MarketClock clock={clock} />}
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-        {/* Market Overview */}
-        <section>
-          <h2 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3">
-            Market Overview
-          </h2>
-          <div className="bg-gray-900 rounded-lg border border-gray-800">
-            <StockTable
-              stocks={stocks}
-              selectedSymbol={selectedSymbol}
-              onSelect={setSelectedSymbol}
-            />
-          </div>
-        </section>
+      {/* Main content - fills remaining height */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Stock list */}
+        <div className="w-[420px] shrink-0 border-r border-gray-800 flex flex-col">
+          <StockTable
+            stocks={stocks}
+            selectedSymbol={selectedSymbol}
+            onSelect={setSelectedSymbol}
+          />
+        </div>
 
-        {/* Chart + Agent Panel side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Right: Charts + Agent */}
+        <div className="flex-1 flex flex-col overflow-y-auto p-4 gap-4">
           {/* Price Chart */}
-          <section>
-            {selectedStock ? (
-              <PriceChart stock={selectedStock} />
-            ) : (
-              <div className="bg-gray-900 rounded-lg border border-gray-800 p-8 flex items-center justify-center h-full min-h-[300px]">
-                <p className="text-gray-500">
-                  Select a stock to view its price chart
-                </p>
-              </div>
-            )}
-          </section>
+          {selectedStock ? (
+            <PriceChart stock={selectedStock} />
+          ) : (
+            <div className="bg-gray-900 rounded-lg border border-gray-800 p-8 flex items-center justify-center min-h-[300px]">
+              <p className="text-gray-500">
+                Select a stock to view its price chart
+              </p>
+            </div>
+          )}
+
+          {/* Portfolio Value Chart */}
+          <PortfolioChart activities={activities} />
 
           {/* Agent Panel */}
-          <section>
-            {portfolio && (
-              <AgentPanel portfolio={portfolio} activities={activities} />
-            )}
-          </section>
+          {portfolio && (
+            <AgentPanel portfolio={portfolio} activities={activities} />
+          )}
         </div>
       </div>
     </div>

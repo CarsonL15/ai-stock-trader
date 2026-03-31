@@ -4,6 +4,7 @@ import OutsideAccess.CompactJsonObjects.CompactJsonStock;
 import bots.TradingBotBasic;
 import market.Market;
 import market.Stock;
+import market.StockListing;
 
 import java.util.HashMap;
 
@@ -13,6 +14,10 @@ public class SpecialBot extends TradingBotBasic {
     public SpecialBot(){
         cash = 1000000;
         wealth = 15;
+    }
+
+    public void clearInitialHoldings(){
+        stockHeld.clear();
     }
 
     public synchronized double getCash(){
@@ -116,6 +121,64 @@ public class SpecialBot extends TradingBotBasic {
         }
         unlockBuySellLock();
         return returnMessage;
+    }
+
+    public synchronized String placeMarketBuyOrder(String stockName, int shares){
+        StockListing listing = Market.getStockListing(stockName);
+        if(listing == null) return "FAILURE: Stock " + stockName + " not found";
+        if(shares <= 0) return "FAILURE: Invalid share count";
+
+        float sellPrice = listing.getCheapestSellPrice();
+        if(sellPrice <= 0) return "FAILURE: No sell orders available for " + stockName;
+
+        float totalCost = sellPrice * shares;
+        if(cash < totalCost) return "FAILURE: Insufficient cash (need $" + totalCost + ", have $" + cash + ")";
+
+        // Execute directly — take the sell order off the book immediately
+        Stock result = listing.executeMarketBuy(shares);
+        if(result == null) return "FAILURE: No matching sell orders";
+
+        // Update our own holdings and cash directly
+        getBuySellLock();
+        if(stockHeld.containsKey(stockName)){
+            stockHeld.get(stockName).addShares(result.getShareCount());
+        } else {
+            stockHeld.put(stockName, new Stock(result.getShareCount(), stockName, result.getPrice(), this));
+        }
+        cash -= result.getShareCount() * result.getPrice();
+        unlockBuySellLock();
+
+        float spent = result.getShareCount() * result.getPrice();
+        return "SUCCESS: Bought " + result.getShareCount() + " " + stockName + " at $" + result.getPrice() + "/share (total: $" + spent + ")";
+    }
+
+    public synchronized String placeMarketSellOrder(String stockName, int shares){
+        if(!stockHeld.containsKey(stockName)) return "FAILURE: " + stockName + " not in portfolio";
+        if(shares <= 0) return "FAILURE: Invalid share count";
+        if(shares > stockHeld.get(stockName).getShareCount()) return "FAILURE: Not enough shares (own " + stockHeld.get(stockName).getShareCount() + ")";
+
+        StockListing listing = Market.getStockListing(stockName);
+        if(listing == null) return "FAILURE: Stock not found";
+
+        float buyPrice = listing.getHighestBuyPrice();
+        if(buyPrice <= 0) return "FAILURE: No buy orders available for " + stockName;
+
+        // Execute directly — take the buy order off the book immediately
+        Stock result = listing.executeMarketSell(shares);
+        if(result == null) return "FAILURE: No matching buy orders";
+
+        // Update our own holdings and cash directly
+        getBuySellLock();
+        if(shares >= stockHeld.get(stockName).getShareCount()){
+            stockHeld.remove(stockName);
+        } else {
+            stockHeld.get(stockName).removeShares(result.getShareCount());
+        }
+        cash += result.getShareCount() * result.getPrice();
+        unlockBuySellLock();
+
+        float earned = result.getShareCount() * result.getPrice();
+        return "SUCCESS: Sold " + result.getShareCount() + " " + stockName + " at $" + result.getPrice() + "/share (total: $" + earned + ")";
     }
 
     @Override

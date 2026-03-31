@@ -90,7 +90,7 @@ public abstract class TradingBotBasic {
     }
 
     public synchronized void completeSellOrder(Stock s){
-        if(sellOrders.get(s.getStockName()) != null &&  s.getPrice() == sellOrders.get(s.getStockName()).getPrice()){
+        if(sellOrders.get(s.getStockName()) != null &&  Math.abs(s.getPrice() - sellOrders.get(s.getStockName()).getPrice()) < 0.01f){
             internalCompleteSellOrder(s);
         }
     }

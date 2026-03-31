@@ -159,6 +159,65 @@ public class OrderQueue {
 
     }
 
+    public float getCheapestSellPrice(){
+        Stock cheapest = sellQueue.peek();
+        return cheapest != null ? cheapest.getPrice() : -1;
+    }
+
+    public float getHighestBuyPrice(){
+        Stock highest = buyQueue.peek();
+        return highest != null ? highest.getPrice() : -1;
+    }
+
+    // Direct market execution — bypasses the order book matching loop
+    public synchronized Stock takeTopSellOrder(int maxShares){
+        Stock sellOrder = sellQueue.peek();
+        if(sellOrder == null) return null;
+
+        int available = sellOrder.getShareCount();
+        int traded = Math.min(maxShares, available);
+        float price = sellOrder.getPrice();
+
+        sellOrder.getOwner().getBuySellLock();
+
+        Stock tradeStock = new Stock(traded, queueOwner.getName(), price, sellOrder.getOwner());
+        sellOrder.getOwner().completeSellOrder(tradeStock);
+
+        if(traded >= available){
+            sellQueue.remove(sellOrder);
+        }
+
+        queueOwner.lastSale(price);
+        Market.orderCount();
+
+        sellOrder.getOwner().unlockBuySellLock();
+        return new Stock(traded, queueOwner.getName(), price, null);
+    }
+
+    public synchronized Stock takeTopBuyOrder(int maxShares){
+        Stock buyOrder = buyQueue.peek();
+        if(buyOrder == null) return null;
+
+        int available = buyOrder.getShareCount();
+        int traded = Math.min(maxShares, available);
+        float price = buyOrder.getPrice();
+
+        buyOrder.getOwner().getBuySellLock();
+
+        Stock tradeStock = new Stock(traded, queueOwner.getName(), price, buyOrder.getOwner());
+        buyOrder.getOwner().completeBuyOrder(tradeStock);
+
+        if(traded >= available){
+            buyQueue.remove(buyOrder);
+        }
+
+        queueOwner.lastSale(price);
+        Market.orderCount();
+
+        buyOrder.getOwner().unlockBuySellLock();
+        return new Stock(traded, queueOwner.getName(), price, null);
+    }
+
     public int getNumSellOrders(){
         return sellQueue.size();
     }

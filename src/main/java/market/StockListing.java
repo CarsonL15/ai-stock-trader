@@ -303,6 +303,22 @@ public class StockListing{
         return this.priceHistory;
     }
 
+    public float getCheapestSellPrice(){
+        return orders.getCheapestSellPrice();
+    }
+
+    public float getHighestBuyPrice(){
+        return orders.getHighestBuyPrice();
+    }
+
+    public Stock executeMarketBuy(int maxShares){
+        return orders.takeTopSellOrder(maxShares);
+    }
+
+    public Stock executeMarketSell(int maxShares){
+        return orders.takeTopBuyOrder(maxShares);
+    }
+
     public int getNumSellOrders(){
         return orders.getNumSellOrders();
     }

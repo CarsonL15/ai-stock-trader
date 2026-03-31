@@ -11,6 +11,7 @@ public class CompactJsonStockListing {
     private int totalSharesInExistence;
     private float lastSalePrice;
     private String hype;
+    private int hypeNumeric;
 
     private float avgSixMonthGrowth;
     private float avgFiveYearGrowth;
@@ -31,6 +32,7 @@ public class CompactJsonStockListing {
         lastSalePrice = s.getLastSalePrice();
 
         int hypeNum = s.getHype();
+        this.hypeNumeric = hypeNum;
 
         if(hypeNum > 80){
             this.hype = "Hype is overwhelmingly positive";
